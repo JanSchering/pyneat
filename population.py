@@ -13,7 +13,7 @@ class Population:
     Represents a population of genomes.
     """
 
-    def __init__(self, size_in: int, size_out: int, env_creator, fitness_criterion, size_pop: int = 50):
+    def __init__(self, size_in: int, size_out: int, fitness_criterion, size_pop: int = 50):
         self.fitness_criterion = fitness_criterion
         self.genomes: List[Genome] = []
         self.species: List[List[Genome]] = []
