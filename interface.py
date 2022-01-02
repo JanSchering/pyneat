@@ -81,7 +81,7 @@ if __name__ == '__main__':
             print(f"Best Score: {gen_highscore}")
             print(f"Species: {len(population.species)}")
             # Update Statistics
-            stat_writer.writerow([i, len(population.species, gen_highscore)])
+            stat_writer.writerow([i, len(population.species), gen_highscore])
             # Check if the learning process is finished
             if population.best_genome.unadjusted_fitness > threshold:
                 print("Found a winner!")
@@ -94,3 +94,5 @@ if __name__ == '__main__':
         if not found_winner:
             print(
                 f"No Genome was able to match the Threshold, highest Performance: {highest_performance}")
+
+# %%
