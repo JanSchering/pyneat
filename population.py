@@ -138,6 +138,8 @@ class Population:
         for spec in self.species:
             spec.sort_by_fitness()
 
+        self.genomes.sort(key=lambda genome: genome.fitness)
+
         self.species.sort(key=lambda spec: spec.avg_fitness)
 
     def mass_extinction(self) -> None:
