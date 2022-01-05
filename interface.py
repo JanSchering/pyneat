@@ -1,13 +1,13 @@
 # %%
 from __future__ import annotations
 from typing import Any, Callable, List, Tuple
-from genome import Genome
-from population import Population
+from pyneat import Genome
+from pyneat import Population
 import gym
 import pybullet_envs
 import pybulletgym
 import numpy as np
-import innovationcounter
+import pyneat.innovationcounter as innovationcounter
 import pickle
 import time
 import os

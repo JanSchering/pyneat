@@ -1,11 +1,11 @@
 from __future__ import annotations
 from typing import Callable, List
-from node import Node
-from connection import Connection
-from connectionhistory import ConnectionHistory
+from .node import Node
+from .connection import Connection
+from .connectionhistory import ConnectionHistory
+from . import innovationcounter
 import random
 import math
-import innovationcounter
 
 
 class Genome:

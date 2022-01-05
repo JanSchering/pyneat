@@ -1,11 +1,11 @@
 from __future__ import annotations
 from typing import Any, Callable, List, Tuple
-from node import Node
-from connection import Connection
+from .node import Node
+from .connection import Connection
+from .genome import Genome
+from .species import Species
 import random
 import math
-from genome import Genome
-from species import Species
 
 
 class Population:

@@ -2,7 +2,7 @@ from __future__ import annotations
 from enum import Enum
 import random
 from typing import List, Tuple
-from connection import Connection
+from .connection import Connection
 import math
 
 

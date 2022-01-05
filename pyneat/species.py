@@ -1,10 +1,10 @@
 from __future__ import annotations
 from typing import Callable, List
-from node import Node
-from connection import Connection
+from .node import Node
+from .connection import Connection
+from .genome import Genome
 import random
 import math
-from genome import Genome
 
 
 class Species:

@@ -1,3 +1,6 @@
 __pycache__/**
 stats/**
 genomes/**
+pyneat/__pycache__/**
+dqn/__pycache__/**
+dqn/logs/**

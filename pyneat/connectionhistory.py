@@ -2,8 +2,8 @@ from __future__ import annotations
 import random
 from typing import List, Tuple, TYPE_CHECKING
 if TYPE_CHECKING:
-    from node import Node
-    from genome import Genome
+    from .node import Node
+    from .genome import Genome
 
 
 class ConnectionHistory:
