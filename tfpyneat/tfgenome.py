@@ -21,7 +21,6 @@ class TFGenome:
     def __init__(self, num_in, num_out, crossover):
         self.num_in: int = num_in
         self.num_out: int = num_out
-        self.bias = None
 
         self.layers: int = 2
 
@@ -137,11 +136,7 @@ class TFGenome:
         """
         Calculate forward pass through the net
         """
-        #ins = np.array(inputs)[np.newaxis, :]
         ins = [inputs[:, col][np.newaxis, :] for col in range(inputs.shape[1])]
-        # Need to fix this, because we have detached inputs! Probably something like a list of 4 np arrays and they each have a batch dimension
-        self.connect_nodes()
-        self.create_model()
         return self.model.predict(ins)
 
     def produce_offspring(self, partner: "TFGenome") -> "TFGenome":
@@ -154,7 +149,6 @@ class TFGenome:
         offspring.connections = []
         offspring.nodes = []
         offspring.layers = self.layers
-        offspring.biasnode_num = self.biasnode_num
 
         child_connections: List[Connection] = []
         is_enabled = []
@@ -200,6 +194,7 @@ class TFGenome:
             offspring.connections.append(conn_clone)
 
         offspring.connect_nodes()
+        offspring.create_model()
         return offspring
 
     def mutate_genome(self, innovationhistory) -> None:
@@ -321,7 +316,6 @@ class TFGenome:
         clone.unadjusted_fitness = self.unadjusted_fitness
         clone.best_score = self.best_score
         clone.layers = self.layers
-        clone.biasnode_num = self.biasnode_num
         clone.connect_nodes()
         clone.create_model()
         return clone
