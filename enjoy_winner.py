@@ -7,7 +7,7 @@ import csv
 import gym
 import pybullet_envs
 import pybulletgym
-from interface import clamp
+from interface_neat import clamp
 
 
 def run_game(genome):

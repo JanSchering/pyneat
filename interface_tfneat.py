@@ -1,8 +1,8 @@
 # %%
 from __future__ import annotations
 from typing import Any, Callable, List, Tuple
-from pyneat import Genome
-from pyneat import Population
+from tfpyneat import TFGenome
+from tfpyneat import TFPopulation
 import gym
 import pybullet_envs
 import pybulletgym
@@ -16,11 +16,11 @@ import csv
 # utils for the learning process
 runs_per_net = 2
 max_generations = 200
-threshold = 900
+threshold = 80
 
 # stat utils
 CSV_HEADER = ["generation, species, highscore"]
-STAT_PATH = os.path.join(os.getcwd(), "stats")
+STAT_PATH = os.path.join(os.getcwd(), "stats_tfpyneat")
 
 
 def clamp(l: List[float]) -> List[float]:
@@ -30,7 +30,7 @@ def clamp(l: List[float]) -> List[float]:
     return [1 if x > 1 else -1 if x < -1 else x for x in l]
 
 
-def eval_genome(genome: Genome) -> float:
+def eval_genome(genome: TFGenome) -> float:
     """
     The fitness criterion that will be used to evaluate the Genomes 
     in the natural selection process
@@ -44,7 +44,7 @@ def eval_genome(genome: Genome) -> float:
         fitness = 0.0
         done = False
         while not done:
-            outputs = genome.forward(observation)
+            outputs = genome.forward(observation[np.newaxis, :])
             # Move the game forward
             observation, reward, done, info = env.step(clamp(outputs))
             fitness += reward
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         # The innovation counter is needed to track the novel mutations in the Population
         innovationcounter.init()
         # Initialize the population of genomes
-        population = Population(4, 1, eval_genome, 200)
+        population = TFPopulation(4, 1, eval_genome, 50)
         # Keep track of whether the learning process was successful
         found_winner = False
         # Keep track of the all-time highscore achieved during training

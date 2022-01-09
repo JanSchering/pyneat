@@ -2,7 +2,7 @@ from __future__ import annotations
 from enum import Enum
 import random
 from typing import List, Tuple
-from ..pyneat.connection import Connection
+from pyneat.connection import Connection
 import math
 import keras
 
@@ -15,7 +15,7 @@ class TFNode:
     (boolean) out: Whether the node is an output node
     """
 
-    def __init__(self, num, layer=None, is_out=False, activation="sigmoid"):
+    def __init__(self, num, layer=None, is_out=False, activation="tanh"):
         self.num: int = num
         self.input_val = 0
         self.out_val = 0
@@ -35,8 +35,9 @@ class TFNode:
         """
         Randomly assigns a new activation function to the node 
         """
-        self.activation = random.choice(list(
-            [keras.activations.relu, keras.activations.tanh, keras.activations.sigmoid]))
+        pass
+        # self.activation = random.choice(list(
+        #    [keras.activations.relu, keras.activations.tanh, keras.activations.sigmoid]))
 
     def clone(self) -> "TFNode":
         cloned = TFNode(self.num, self.layer, self.is_out)

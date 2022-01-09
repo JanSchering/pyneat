@@ -1,9 +1,9 @@
 import gym
-env = gym.make('MountainCar-v0')
+import pybulletgym
+env = gym.make('InvertedPendulumMuJoCoEnv-v0')
 env.reset()
 print(f"OBS: {env.observation_space} ACT: {env.action_space}")
 for _ in range(1000):
-    _, reward, _, _ = env.step(env.action_space.sample())
-    print(reward)
+    _, reward, done, _ = env.step(env.action_space.sample())
     env.render('human')
 env.close()

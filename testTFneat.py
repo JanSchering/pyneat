@@ -1,6 +1,6 @@
 # %%
 from IPython.display import Image
-from pyneat import TFNode, TFGenome
+from tfpyneat import TFNode, TFGenome
 from pyneat import innovationcounter
 import tensorflow as tf
 import numpy as np

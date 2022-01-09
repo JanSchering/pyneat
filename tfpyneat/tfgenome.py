@@ -3,9 +3,9 @@ from typing import Callable, List
 
 from keras import layers
 from .tfnode import TFNode
-from ..pyneat.connection import Connection
-from ..pyneat.connectionhistory import ConnectionHistory
-from ..pyneat import innovationcounter
+from pyneat.connection import Connection
+from pyneat.connectionhistory import ConnectionHistory
+from pyneat import innovationcounter
 import random
 import math
 import keras
