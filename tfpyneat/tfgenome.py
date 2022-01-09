@@ -1,14 +1,19 @@
 from __future__ import annotations
 from typing import Callable, List
-from .node import Node
-from .connection import Connection
-from .connectionhistory import ConnectionHistory
-from . import innovationcounter
+
+from keras import layers
+from .tfnode import TFNode
+from ..pyneat.connection import Connection
+from ..pyneat.connectionhistory import ConnectionHistory
+from ..pyneat import innovationcounter
 import random
 import math
+import keras
+import tensorflow as tf
+import numpy as np
 
 
-class Genome:
+class TFGenome:
     """
     Represents a network topology through a list of Connections.
     """
@@ -16,7 +21,7 @@ class Genome:
     def __init__(self, num_in, num_out, crossover):
         self.num_in: int = num_in
         self.num_out: int = num_out
-        self.biasnode_num = None
+        self.bias = None
 
         self.layers: int = 2
 
@@ -30,42 +35,93 @@ class Genome:
 
         self.id_count: int = 0  # Tracks the number of created nodes
 
-        self.nodes: List[Node] = []
+        self.nodes: List[TFNode] = []
         self.connections: List[Connection] = []
-        self.network: List[Node] = []
+        self.network: List[TFNode] = []
 
         if crossover:
             return
 
         # Create and collect a Node for each input
         for i in range(self.num_in):
-            node = Node(self.id_count, layer=0)
+            node = TFNode(self.id_count, layer=0)
             self.id_count += 1
             self.nodes.append(node)
-
-        biasnode = Node(self.id_count, 0)
-        self.nodes.append(biasnode)
-        self.biasnode_num = self.id_count
-        self.id_count += 1
 
         # Create and collect a Node for each output
         for i in range(self.num_out):
-            node = Node(self.id_count, layer=1, is_out=True)
+            node = TFNode(self.id_count, layer=1, is_out=True)
             self.id_count += 1
             self.nodes.append(node)
+
+    def create_model(self):
+        """
+        turns the nodes into a Tensorflow model
+        """
+        self.sort_nodes_by_layer()
+        outputs = {}
+        inputs = []
+
+        for layer in range(self.layers):
+            nodes = [n for n in self.nodes if n.layer == layer]
+
+            if layer == 0:
+                for node in nodes:
+                    outputs[node.num] = keras.Input(shape=(1,))
+                    inputs.append(outputs[node.num])
+                    #outputs[node.num] = node.tfnode
+            else:
+                for node in nodes:
+                    conns = [
+                        c for c in self.connections if c.node_out.num == node.num]
+                    node_ins = []
+                    weights = []
+                    for conn in conns:
+                        layer_val = outputs[conn.node_in.num]
+                        node_ins.append(layer_val)
+                        weights.append(conn.weight)
+
+                    if len(node_ins) == 1:
+                        node_input = node_ins[0]
+                    else:
+                        node_input = keras.layers.Concatenate()(node_ins)
+                    outputs[node.num] = keras.layers.Dense(
+                        1,
+                        activation=node.activation,
+                        kernel_initializer=self.init_weight(weights)
+                    )(node_input)
+                    #outputs[node.num] = node.tfnode(node_input)
+
+        output_nodes = [outputs[n.num] for n in self.nodes if n.is_out]
+        if len(output_nodes) == 1:
+            out = output_nodes[0]
+        else:
+            out = keras.layers.Concatenate()(output_nodes)
+        self.model = keras.Model(inputs=inputs, outputs=out)
 
     def fully_connect(self, innovationhistory):
         """
         Adds Connections to the Genome to create a fully connected phenotype
         """
-        for i in range(self.num_in+1):
-            for j in range(len(self.nodes)-self.num_in+1, len(self.nodes)):
+        for i in range(self.num_in):
+            for j in range(self.num_in, len(self.nodes)):
                 node_in = self.nodes[i]
                 node_out = self.nodes[j]
                 conn_num = self.get_inn_num(
                     innovationhistory, node_in, node_out)
                 self.connections.append(
                     Connection(node_in, node_out, conn_num))
+
+    def init_weight(self, weights):
+        """
+        Creates a weight initializer function for the connection
+        """
+        weight_batch = np.array(weights, dtype="float32")[:, np.newaxis]
+        weight_tensor = tf.Variable(tf.convert_to_tensor(weight_batch))
+
+        def initializer(shape):
+            return weight_tensor
+        return initializer
 
     def connect_nodes(self):
         """
@@ -77,37 +133,22 @@ class Genome:
         for conn in self.connections:
             conn.node_in.out_conn.append(conn)
 
-    def forward(self, inputs) -> List[float]:
+    def forward(self, inputs):
         """
-        Calculates a forward pass through the network
+        Calculate forward pass through the net
         """
+        #ins = np.array(inputs)[np.newaxis, :]
+        ins = [inputs[:, col][np.newaxis, :] for col in range(inputs.shape[1])]
+        # Need to fix this, because we have detached inputs! Probably something like a list of 4 np arrays and they each have a batch dimension
+        self.connect_nodes()
+        self.create_model()
+        return self.model.predict(ins)
 
-        # Clear the old inputs of each node
-        for node in self.nodes:
-            node.input_val = 0
-
-        # Publish the input values to the input nodes
-        for idx, input in enumerate(inputs):
-            self.nodes[idx].out_val = input
-
-        self.nodes[self.biasnode_num].out_val = 1
-
-        result = []
-
-        for node in self.nodes:
-            # Activate each node
-            node.activate_node()
-            # If the node is an output node, collect the result from it
-            if node.is_out:
-                result.append(node.out_val)
-
-        return result
-
-    def produce_offspring(self, partner: "Genome") -> "Genome":
+    def produce_offspring(self, partner: "TFGenome") -> "TFGenome":
         """
         Crosses over itself with another Genome to produce an offspring
         """
-        offspring = Genome(self.num_in, self.num_out, True)
+        offspring = TFGenome(self.num_in, self.num_out, True)
         # Make sure they are using the same innovation count
         offspring.id_count = self.id_count
         offspring.connections = []
@@ -183,6 +224,8 @@ class Genome:
         if random.uniform(0, 1) < 0.01:
             self.add_node(innovationhistory)
 
+        self.create_model()
+
     def add_node(self, innovationhistory) -> None:
         """
         Executes the Mutation of a Genome in which an existing connection is split
@@ -191,21 +234,18 @@ class Genome:
         if len(self.connections) == 0:
             self.add_connection(innovationhistory)
 
-        # Get valid connection to split
+        # Get connection to split
         conn = self.connections[random.randint(0, len(self.connections)-1)]
-        # We don't want to split the bias inputs
-        while conn.node_in == self.nodes[self.biasnode_num] and len(self.connections) != 1:
-            conn = self.connections[random.randint(0, len(self.connections)-1)]
 
         # Disable the original connection
         conn.enabled = False
 
-        # Stop tracking the Node
+        # Stop tracking the old Connection
         self.connections.remove(conn)
 
         # Create the new Node
         newnode_num = self.id_count
-        new_node = Node(newnode_num)
+        new_node = TFNode(newnode_num)
         self.id_count += 1
 
         # Create the new Connections for the node
@@ -223,7 +263,7 @@ class Genome:
         # If direct connection, we added a new layer and every higher layer has to be incremented
         if new_node.layer == conn.node_out.layer:
             for node in self.nodes:
-                if node.layer >= conn.node_in.layer:
+                if node.layer >= new_node.layer:
                     node.layer += 1
 
             self.layers += 1
@@ -261,21 +301,17 @@ class Genome:
         self.connections.append(new_conn)
         self.connect_nodes()
 
-    ###                                                   ###
-    ### ------------ UTIL FUNCTIONS --------------------- ###
-    ###                                                   ###
-
     def sort_nodes_by_layer(self) -> None:
         """
         Sorts the nodes by layer
         """
         self.nodes.sort(key=lambda x: x.layer)
 
-    def clone(self) -> "Genome":
+    def clone(self) -> "TFGenome":
         """
         Returns a copy of the Genome
         """
-        clone = Genome(self.num_in, self.num_out, True)
+        clone = TFGenome(self.num_in, self.num_out, True)
         for node in self.nodes:
             clone.nodes.append(node.clone())
         for connection in self.connections:
@@ -287,6 +323,7 @@ class Genome:
         clone.layers = self.layers
         clone.biasnode_num = self.biasnode_num
         clone.connect_nodes()
+        clone.create_model()
         return clone
 
     def is_fully_connected(self) -> bool:
@@ -310,7 +347,7 @@ class Genome:
 
         return max_connections <= len(self.connections)
 
-    def is_connected(self, node1: Node, node2: Node) -> bool:
+    def is_connected(self, node1: TFNode, node2: TFNode) -> bool:
         """
         Checks if there is a connection between the Nodes in the Genome.
         (Node) node1: The first node
@@ -324,7 +361,7 @@ class Genome:
                 return True
         return False
 
-    def get_node(self, num: int) -> Node:
+    def get_node(self, num: int) -> TFNode:
         """
         Finds and retrieves a Node in the Genome. Else returns -1
         (int) num: The innovation number of the Node that is searched for
@@ -354,7 +391,7 @@ class Genome:
         """
         return len(self.connections) + len(self.nodes)
 
-    def get_inn_num(self, innovationhistory: List[ConnectionHistory], node_in: Node, node_out: Node):
+    def get_inn_num(self, innovationhistory: List[ConnectionHistory], node_in: TFNode, node_out: TFNode):
         """
         Returns the innovation number for the mutation
         """

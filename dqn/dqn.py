@@ -139,8 +139,8 @@ class DQNAgent:
 if not os.path.isdir('models'):
     os.makedirs('models')
 
-env = gym.make("InvertedPendulumMuJoCoEnv-v0")
-agent = DQNAgent(env.observation_space.shape[0], env.action_space.shape[0])
+env = gym.make("MountainCar-v0")
+agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
 ep_rewards = []
 
 # Iterate over episodes
