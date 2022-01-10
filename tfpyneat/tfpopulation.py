@@ -20,8 +20,8 @@ class TFPopulation:
         self.innovationhistory = []
 
         self.best_genome = None
-        self.best_score = 0
-        self.global_best_score = 0
+        self.best_score = float("-inf")
+        self.global_best_score = float("-inf")
         self.gen = 1
         self.best_per_gen: List[TFGenome] = []
         self.species: List[TFSpecies] = []
