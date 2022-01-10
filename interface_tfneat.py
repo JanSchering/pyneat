@@ -14,15 +14,39 @@ import os
 import csv
 
 # utils for the learning process
-runs_per_net = 2
+runs_per_net = 5
 max_generations = 200
-threshold = 170
+threshold = 200
 
 # stat utils
 CSV_HEADER = ["generation, species, highscore"]
 STAT_PATH = os.path.join(os.getcwd(), "stats_tfpyneat")
 
 env = gym.make("LunarLander-v2")
+
+
+def enjoy(genome):
+    env = gym.make("LunarLander-v2")
+    # Get the initial state of the environment
+    observation = env.reset()
+    # Track the total score achieved
+    total_reward = 0
+    # Run the game infinitely
+    while True:
+        # Forward pass the state through the network
+        outputs = softmax(genome.forward(observation))
+        # Move the game forward
+        observation, reward, done, info = env.step(np.argmax(outputs))
+        # add on the reward
+        total_reward += reward
+        if done:
+            print(f"GAME OVER - FINAL SCORE: {total_reward}")
+            # reset the game
+            total_reward = 0
+            env.reset()
+            print(f"STARTING NEW ROUND")
+        else:
+            env.render(mode="human")
 
 
 def clamp(l: List[float]) -> List[float]:
@@ -66,11 +90,11 @@ def eval_genome(genome: TFGenome) -> float:
 
 
 if __name__ == '__main__':
-    for blubbb in range(2):
+    for blubbb in range(1):
         # The innovation counter is needed to track the novel mutations in the Population
         innovationcounter.init()
         # Initialize the population of genomes
-        population = TFPopulation(8, 4, eval_genome, 200)
+        population = TFPopulation(8, 4, eval_genome, 100)
         # Keep track of whether the learning process was successful
         found_winner = False
         # Keep track of the all-time highscore achieved during training
@@ -100,8 +124,9 @@ if __name__ == '__main__':
                     print("Found a winner!")
                     found_winner = True
                     # Save the winning genome
-                    with open(f"winner{timestamp}.pickle", "wb") as file:
+                    with open(f"winner.pickle", "wb") as file:
                         pickle.dump(population.best_genome, file)
+                        enjoy(population.best_genome)
                     break
             # Learning Process ended without finding a strong enough Genome
             if not found_winner:

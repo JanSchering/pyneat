@@ -161,8 +161,8 @@ class TFPopulation:
         """
         Kills species that havent made improvements in 15 generations
         """
-        # For every species apart from the top 2
-        for spec in self.species[0:-2]:
+        # For every species apart from the top 4
+        for spec in self.species[:-3]:
             if spec.gens_wo_change > 15:
                 self.species.remove(spec)
 

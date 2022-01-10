@@ -84,13 +84,19 @@ class TFGenome:
                         node_input = node_ins[0]
                     else:
                         node_input = keras.layers.Concatenate()(node_ins)
-                    # TODO: Add bias_initializer
-                    outputs[node.num] = keras.layers.Dense(
-                        1,
-                        activation=node.get_tfactivation(),
-                        kernel_initializer=self.init_weight(weights)
-                    )(node_input)
-                    #outputs[node.num] = node.tfnode(node_input)
+                    if not node.is_out:
+                        outputs[node.num] = keras.layers.Dense(
+                            1,
+                            activation=node.get_tfactivation(),
+                            kernel_initializer=self.init_weight(weights),
+                            bias_initializer=self.init_bias(node)
+                        )(node_input)
+                    else:
+                        outputs[node.num] = keras.layers.Dense(
+                            1,
+                            kernel_initializer=self.init_weight(weights),
+                            bias_initializer=self.init_bias(node)
+                        )(node_input)
 
         output_nodes = [outputs[n.num] for n in self.nodes if n.is_out]
         if len(output_nodes) == 1:
@@ -112,9 +118,20 @@ class TFGenome:
                 self.connections.append(
                     TFConnection(node_in, node_out, conn_num))
 
+    def init_bias(self, node: TFNode):
+        """
+        Creates a bias initializer function for the tf model
+        """
+        bias = np.array([node.bias], dtype="float32")
+        bias_tensor = tf.Variable(tf.convert_to_tensor(bias))
+
+        def initializer(shape):
+            return bias_tensor
+        return initializer
+
     def init_weight(self, weights):
         """
-        Creates a weight initializer function for the connection
+        Creates a weight initializer function for the tf model
         """
         weight_batch = np.array(weights, dtype="float32")[:, np.newaxis]
         weight_tensor = tf.Variable(tf.convert_to_tensor(weight_batch))
@@ -137,9 +154,13 @@ class TFGenome:
         """
         Calculate forward pass through the net
         """
+        self.sort_nodes_by_layer()
+        self.connect_nodes()
+
         # Clear the old inputs of each node
         for node in self.nodes:
             node.input_val = 0
+            node.out_val = 0
 
         # Publish the input values to the input nodes
         for idx, input in enumerate(inputs):
@@ -147,7 +168,6 @@ class TFGenome:
 
         result = []
 
-        self.sort_nodes_by_layer()
         for node in self.nodes:
             # Activate each node
             node.activate_node()
@@ -238,7 +258,7 @@ class TFGenome:
             self.add_connection(innovationhistory)
 
         # 1% chance that the genome mutates and adds a new Node
-        if random.uniform(0, 1) < 0.01:
+        if random.uniform(0, 1) < 0.1:
             self.add_node(innovationhistory)
 
     def add_node(self, innovationhistory) -> None:

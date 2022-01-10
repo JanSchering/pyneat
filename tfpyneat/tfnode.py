@@ -25,8 +25,8 @@ class TFNode:
 
     def __init__(self, num, layer=None, is_out=False):
         self.num: int = num
-        self.input_val = 0
-        self.out_val = 0
+        self.input_val = 0.
+        self.out_val = 0.
         self.out_conn: List[Connection] = []
         self.layer: int = layer
 

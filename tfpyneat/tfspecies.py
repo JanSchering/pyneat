@@ -21,9 +21,9 @@ class TFSpecies:
         self.representative: TFGenome = None
 
         # Compatibility Distance factors
-        self.excess_coeff = 1
+        self.excess_coeff = 1.5
         self.weight_diff_coeff = 0.5
-        self.compat_thres = 2
+        self.compat_thres = 1
 
         if genome:
             self.genomes.append(genome)
@@ -39,10 +39,7 @@ class TFSpecies:
         count = self.count_excess_and_disjoint(genome)
         avg_weight_dif = self.calc_avg_weight_dif(genome)
 
-        normalizer = genome.calc_weight() - 20
-        normalizer = 1 if normalizer < 1 else normalizer
-
-        compatibility = (self.excess_coeff*count)/normalizer + \
+        compatibility = (self.excess_coeff*count) + \
             self.weight_diff_coeff*avg_weight_dif
         return compatibility < self.compat_thres
 
@@ -83,6 +80,13 @@ class TFSpecies:
                     matching_genes += 1
                     total_diff += abs(conn1.weight - conn2.weight)
                     break
+
+        # for node in self.representative.nodes:
+        #    for node2 in genome.nodes:
+        #        if node.num == node2.num:
+        #            matching_genes += 1
+        #        else:
+        #            total_diff += abs(node.bias - node2.bias)
 
         if matching_genes == 0:
             return 100
