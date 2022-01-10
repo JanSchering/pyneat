@@ -15,8 +15,8 @@ import csv
 
 # utils for the learning process
 runs_per_net = 2
-max_generations = 200
-threshold = 80
+max_generations = 100
+threshold = 800
 
 # stat utils
 CSV_HEADER = ["generation, species, highscore"]
@@ -46,7 +46,7 @@ def eval_genome(genome: TFGenome) -> float:
         while not done:
             outputs = genome.forward(observation[np.newaxis, :])
             # Move the game forward
-            observation, reward, done, info = env.step(clamp(outputs))
+            observation, reward, done, info = env.step(outputs)
             fitness += reward
 
         fitnesses.append(fitness)
@@ -55,11 +55,11 @@ def eval_genome(genome: TFGenome) -> float:
 
 
 if __name__ == '__main__':
-    for blubbb in range(20):
+    for blubbb in range(2):
         # The innovation counter is needed to track the novel mutations in the Population
         innovationcounter.init()
         # Initialize the population of genomes
-        population = TFPopulation(4, 1, eval_genome, 50)
+        population = TFPopulation(4, 1, eval_genome, 40)
         # Keep track of whether the learning process was successful
         found_winner = False
         # Keep track of the all-time highscore achieved during training

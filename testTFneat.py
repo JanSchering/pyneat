@@ -4,7 +4,7 @@ from tfpyneat import TFNode, TFGenome
 from pyneat import innovationcounter
 import tensorflow as tf
 import numpy as np
-
+# %%
 innovationcounter.init()
 innovationhistory = []
 genome = TFGenome(num_in=4, num_out=2, crossover=False)

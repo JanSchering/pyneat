@@ -194,7 +194,6 @@ class TFGenome:
             offspring.connections.append(conn_clone)
 
         offspring.connect_nodes()
-        offspring.create_model()
         return offspring
 
     def mutate_genome(self, innovationhistory) -> None:
