@@ -3,7 +3,7 @@ from typing import Any, Callable, List, Tuple
 from .tfnode import TFNode
 from .tfgenome import TFGenome
 from .tfspecies import TFSpecies
-from pyneat import Connection
+from .tfconnection import TFConnection
 import random
 import math
 

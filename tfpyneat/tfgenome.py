@@ -3,7 +3,7 @@ from typing import Callable, List
 
 from keras import layers
 from .tfnode import TFNode
-from pyneat.connection import Connection
+from .tfconnection import TFConnection
 from pyneat.connectionhistory import ConnectionHistory
 from pyneat import innovationcounter
 import random
@@ -35,7 +35,7 @@ class TFGenome:
         self.id_count: int = 0  # Tracks the number of created nodes
 
         self.nodes: List[TFNode] = []
-        self.connections: List[Connection] = []
+        self.connections: List[TFConnection] = []
         self.network: List[TFNode] = []
 
         if crossover:
@@ -84,9 +84,10 @@ class TFGenome:
                         node_input = node_ins[0]
                     else:
                         node_input = keras.layers.Concatenate()(node_ins)
+                    # TODO: Add bias_initializer
                     outputs[node.num] = keras.layers.Dense(
                         1,
-                        activation=node.activation,
+                        activation=node.get_tfactivation(),
                         kernel_initializer=self.init_weight(weights)
                     )(node_input)
                     #outputs[node.num] = node.tfnode(node_input)
@@ -109,7 +110,7 @@ class TFGenome:
                 conn_num = self.get_inn_num(
                     innovationhistory, node_in, node_out)
                 self.connections.append(
-                    Connection(node_in, node_out, conn_num))
+                    TFConnection(node_in, node_out, conn_num))
 
     def init_weight(self, weights):
         """
@@ -136,8 +137,24 @@ class TFGenome:
         """
         Calculate forward pass through the net
         """
-        ins = [inputs[:, col][np.newaxis, :] for col in range(inputs.shape[1])]
-        return self.model.predict(ins)
+        # Clear the old inputs of each node
+        for node in self.nodes:
+            node.input_val = 0
+
+        # Publish the input values to the input nodes
+        for idx, input in enumerate(inputs):
+            self.nodes[idx].out_val = input
+
+        result = []
+
+        for node in self.nodes:
+            # Activate each node
+            node.activate_node()
+            # If the node is an output node, collect the result from it
+            if node.is_out:
+                result.append(node.out_val)
+
+        return result
 
     def produce_offspring(self, partner: "TFGenome") -> "TFGenome":
         """
@@ -150,7 +167,7 @@ class TFGenome:
         offspring.nodes = []
         offspring.layers = self.layers
 
-        child_connections: List[Connection] = []
+        child_connections: List[TFConnection] = []
         is_enabled = []
 
         for conn in self.connections:
@@ -205,6 +222,10 @@ class TFGenome:
             for conn in self.connections:
                 conn.mutate_weight()
 
+        if random.uniform(0, 1) < 0.5:
+            for node in self.nodes:
+                node.mutate_bias()
+
         # 10% chance to mutate the activation functions
         if random.uniform(0, 1) < 0.1:
             for node in self.nodes:
@@ -217,8 +238,6 @@ class TFGenome:
         # 1% chance that the genome mutates and adds a new Node
         if random.uniform(0, 1) < 0.01:
             self.add_node(innovationhistory)
-
-        self.create_model()
 
     def add_node(self, innovationhistory) -> None:
         """
@@ -244,9 +263,11 @@ class TFGenome:
 
         # Create the new Connections for the node
         inn_num = self.get_inn_num(innovationhistory, new_node, conn.node_out)
-        con_out = Connection(new_node, conn.node_out, inn_num, conn.weight)
+        con_out = TFConnection(new_node, conn.node_out,
+                               inn_num, conn.weight)
         inn_num = self.get_inn_num(innovationhistory, conn.node_in, new_node)
-        con_in = Connection(conn.node_in, new_node, inn_num, weight=1)
+        con_in = TFConnection(conn.node_in, new_node,
+                              inn_num, weight=1)
 
         self.connections.append(con_in)
         self.connections.append(con_out)
@@ -287,10 +308,10 @@ class TFGenome:
         weight = random.uniform(-1, 1)
         if node1.layer > node2.layer:
             inn_num = self.get_inn_num(innovationhistory, node2, node1)
-            new_conn = Connection(node2, node1, inn_num, weight)
+            new_conn = TFConnection(node2, node1, inn_num, weight)
         else:
             inn_num = self.get_inn_num(innovationhistory, node1, node2)
-            new_conn = Connection(node1, node2, inn_num, weight)
+            new_conn = TFConnection(node1, node2, inn_num, weight)
 
         self.connections.append(new_conn)
         self.connect_nodes()
@@ -316,7 +337,6 @@ class TFGenome:
         clone.best_score = self.best_score
         clone.layers = self.layers
         clone.connect_nodes()
-        clone.create_model()
         return clone
 
     def is_fully_connected(self) -> bool:
@@ -366,7 +386,7 @@ class TFGenome:
         else:
             return -1
 
-    def find_conn_idx(self, c: Connection) -> int:
+    def find_conn_idx(self, c: TFConnection) -> int:
         """
         Finds and retrieves the Index of a connection in the Genomes Connecton List. 
         Else returns -1

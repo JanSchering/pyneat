@@ -7,6 +7,15 @@ import math
 import keras
 
 
+class Activation(Enum):
+    SIGMOID = "sigmoid"
+    TANH = "tanh"
+    RELU = "relu"
+    IDENTITY = "identity"
+    STEP = "step"
+    CLAMPED = "clamped"
+
+
 class TFNode:
     """
     Represents a Node (Neuron) gene.
@@ -15,7 +24,7 @@ class TFNode:
     (boolean) out: Whether the node is an output node
     """
 
-    def __init__(self, num, layer=None, is_out=False, activation="tanh"):
+    def __init__(self, num, layer=None, is_out=False):
         self.num: int = num
         self.input_val = 0
         self.out_val = 0
@@ -24,20 +33,44 @@ class TFNode:
 
         self.is_out: bool = is_out
 
-        if activation == "sigmoid":
-            self.activation = keras.activations.sigmoid
-        elif activation == "tanh":
-            self.activation = keras.activations.tanh
-        elif activation == "relu":
-            self.activation = keras.activations.relu
+        self.bias = random.uniform(-1, 1)
+        self.activation = Activation.TANH
+
+    def activate_node(self) -> None:
+        """
+        Calculates the activation of the node and publishes the result to all registered connections
+        """
+        # We only need to activate nodes that are not inputs
+        if self.layer != 0:
+            self.out_val = self.apply_primitive_activation(
+                self.input_val + self.bias)
+
+        # Publish the node output to the connections.
+        for conn in self.out_conn:
+            if conn.is_enabled():  # Only publish for active connections
+                conn.node_out.input_val += conn.weight * self.out_val
 
     def mutate_activation(self) -> None:
         """
-        Randomly assigns a new activation function to the node 
+        Randomly assigns a new activation function to the node
         """
         pass
         # self.activation = random.choice(list(
         #    [keras.activations.relu, keras.activations.tanh, keras.activations.sigmoid]))
+
+    def mutate_bias(self) -> None:
+        """
+        Mutate the bias param of the node
+        """
+        if random.uniform(0, 1) < 0.05:
+            self.bias = random.uniform(-1, 1)
+        else:
+            value = random.gauss(0, 1) / 50
+            self.bias += value
+            if self.bias > 1:
+                self.bias = 1
+            elif self.bias < -1:
+                self.bias = -1
 
     def clone(self) -> "TFNode":
         cloned = TFNode(self.num, self.layer, self.is_out)
@@ -73,3 +106,23 @@ class TFNode:
                     return True
         # No matching connection found
         return False
+
+    def apply_primitive_activation(self, x) -> float:
+        """
+        Helper-Function: Applies the current activation function of the node to a given value.
+        (int) x: The value to apply the function to.
+        """
+        if self.activation == Activation.SIGMOID:
+            return 1 / (1 + math.exp(-x))
+        elif self.activation == Activation.RELU:
+            return max(0.0, x)
+        elif self.activation == Activation.TANH:
+            return math.tanh(x)
+
+    def get_tfactivation(self):
+        if self.activation == Activation.SIGMOID:
+            self.activation = keras.activations.sigmoid
+        elif self.activation == Activation.TANH:
+            self.activation = keras.activations.tanh
+        elif self.activation == Activation.RELU:
+            self.activation = keras.activations.relu
