@@ -16,11 +16,13 @@ import csv
 # utils for the learning process
 runs_per_net = 2
 max_generations = 200
-threshold = 800
+threshold = 170
 
 # stat utils
 CSV_HEADER = ["generation, species, highscore"]
 STAT_PATH = os.path.join(os.getcwd(), "stats_tfpyneat")
+
+env = gym.make("LunarLander-v2")
 
 
 def clamp(l: List[float]) -> List[float]:
@@ -28,6 +30,15 @@ def clamp(l: List[float]) -> List[float]:
     Custom clamping activation function for the Genomes' output
     """
     return [1 if x > 1 else -1 if x < -1 else x for x in l]
+
+
+def softmax(x: List[float]) -> List[float]:
+    """
+    Apply softmax on a list of values
+    """
+    y = np.exp(x - np.max(x))
+    f_x = y / np.sum(np.exp(x))
+    return f_x
 
 
 def eval_genome(genome: TFGenome) -> float:
@@ -38,15 +49,15 @@ def eval_genome(genome: TFGenome) -> float:
     fitnesses = []
 
     for runs in range(runs_per_net):
-        env = gym.make("InvertedPendulumMuJoCoEnv-v0")
+        global env
         # env.render(mode=None)
         observation = env.reset()
         fitness = 0.0
         done = False
         while not done:
-            outputs = genome.forward(observation)
+            outputs = softmax(genome.forward(observation))
             # Move the game forward
-            observation, reward, done, info = env.step(outputs)
+            observation, reward, done, info = env.step(np.argmax(outputs))
             fitness += reward
 
         fitnesses.append(fitness)
@@ -59,7 +70,7 @@ if __name__ == '__main__':
         # The innovation counter is needed to track the novel mutations in the Population
         innovationcounter.init()
         # Initialize the population of genomes
-        population = TFPopulation(4, 1, eval_genome, 200)
+        population = TFPopulation(8, 1, eval_genome, 200)
         # Keep track of whether the learning process was successful
         found_winner = False
         # Keep track of the all-time highscore achieved during training
