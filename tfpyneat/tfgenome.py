@@ -133,7 +133,7 @@ class TFGenome:
         for conn in self.connections:
             conn.node_in.out_conn.append(conn)
 
-    def forward(self, inputs):
+    def forward(self, inputs) -> List[float]:
         """
         Calculate forward pass through the net
         """
@@ -147,6 +147,7 @@ class TFGenome:
 
         result = []
 
+        self.sort_nodes_by_layer()
         for node in self.nodes:
             # Activate each node
             node.activate_node()
@@ -199,6 +200,7 @@ class TFGenome:
             if clone.is_out and random.randint(0, 1) == 1:
                 # retrieve the correct node from the partner
                 partner_node = partner.get_node(clone.num)
+                clone.bias = partner_node.bias
                 clone.activation = partner_node.activation
             offspring.nodes.append(clone)
 

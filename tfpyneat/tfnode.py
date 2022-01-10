@@ -11,8 +11,6 @@ class Activation(Enum):
     SIGMOID = "sigmoid"
     TANH = "tanh"
     RELU = "relu"
-    IDENTITY = "identity"
-    STEP = "step"
     CLAMPED = "clamped"
 
 
@@ -34,7 +32,7 @@ class TFNode:
         self.is_out: bool = is_out
 
         self.bias = random.uniform(-1, 1)
-        self.activation = Activation.TANH
+        self.activation = Activation.CLAMPED
 
     def activate_node(self) -> None:
         """
@@ -55,8 +53,7 @@ class TFNode:
         Randomly assigns a new activation function to the node
         """
         pass
-        # self.activation = random.choice(list(
-        #    [keras.activations.relu, keras.activations.tanh, keras.activations.sigmoid]))
+        #self.activation = random.choice(list(Activation))
 
     def mutate_bias(self) -> None:
         """
@@ -74,6 +71,7 @@ class TFNode:
 
     def clone(self) -> "TFNode":
         cloned = TFNode(self.num, self.layer, self.is_out)
+        cloned.bias = self.bias
         cloned.activation = self.activation  # Ensure same activation
         return cloned
 
@@ -118,6 +116,8 @@ class TFNode:
             return max(0.0, x)
         elif self.activation == Activation.TANH:
             return math.tanh(x)
+        elif self.activation == Activation.CLAMPED:
+            return 1 if x > 1 else -1 if x < -1 else x
 
     def get_tfactivation(self):
         if self.activation == Activation.SIGMOID:
