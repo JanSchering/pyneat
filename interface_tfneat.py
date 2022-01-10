@@ -70,7 +70,7 @@ if __name__ == '__main__':
         # The innovation counter is needed to track the novel mutations in the Population
         innovationcounter.init()
         # Initialize the population of genomes
-        population = TFPopulation(8, 1, eval_genome, 200)
+        population = TFPopulation(8, 4, eval_genome, 200)
         # Keep track of whether the learning process was successful
         found_winner = False
         # Keep track of the all-time highscore achieved during training
