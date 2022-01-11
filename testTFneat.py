@@ -57,14 +57,16 @@ print(genome.forward(inputs))
 
 # %%
 # Test pickling process
+model = genome.model
 with open(f"test.pickle", "wb") as file:
+    del genome.model
     pickle.dump(genome, file)
 
 with open(f"test.pickle", "rb") as file:
     loaded_genome = pickle.load(file)
 
 loaded_genome.create_model()
-print(genome.model.predict(processed))
+print(model.predict(processed))
 print(genome.forward(inputs))
 print(loaded_genome.model.predict(processed))
 print(loaded_genome.forward(inputs))
