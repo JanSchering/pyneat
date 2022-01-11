@@ -2,8 +2,8 @@ from __future__ import annotations
 import random
 from typing import List, Tuple, TYPE_CHECKING
 if TYPE_CHECKING:
-    from .node import Node
-    from .genome import Genome
+    from .tfnode import TFNode
+    from .tfgenome import TFGenome
 
 
 class ConnectionHistory:
@@ -18,7 +18,7 @@ class ConnectionHistory:
 
         self.inn_numbers = [n for n in numbers]
 
-    def matches(self, genome: Genome, from_node: Node, to_node: Node):
+    def matches(self, genome: TFGenome, from_node: TFNode, to_node: TFNode):
         """
         Checks if genome matches the original genome and the nodes are matching
         """

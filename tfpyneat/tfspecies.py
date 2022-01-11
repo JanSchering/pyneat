@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Callable, List
 from .tfnode import TFNode
 from .tfgenome import TFGenome
-from pyneat import Connection
+from .tfconnection import TFConnection
 import random
 import math
 

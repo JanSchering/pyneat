@@ -1,9 +1,10 @@
 # %%
 from IPython.display import Image
 from tfpyneat import TFNode, TFGenome
-from pyneat import innovationcounter
+from tfpyneat import innovationcounter
 import tensorflow as tf
 import numpy as np
+import pickle
 
 innovationcounter.init()
 innovationhistory = []
@@ -53,5 +54,19 @@ processed = [in2d[:, col] for col in range(in2d.shape[1])]
 
 print(genome.model.predict(processed))
 print(genome.forward(inputs))
+
+# %%
+# Test pickling process
+with open(f"test.pickle", "wb") as file:
+    pickle.dump(genome, file)
+
+with open(f"test.pickle", "rb") as file:
+    loaded_genome = pickle.load(file)
+
+loaded_genome.create_model()
+print(genome.model.predict(processed))
+print(genome.forward(inputs))
+print(loaded_genome.model.predict(processed))
+print(loaded_genome.forward(inputs))
 
 # %%

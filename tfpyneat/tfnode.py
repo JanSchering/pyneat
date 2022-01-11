@@ -2,7 +2,7 @@ from __future__ import annotations
 from enum import Enum
 import random
 from typing import List, Tuple
-from pyneat.connection import Connection
+from .tfconnection import TFConnection
 import math
 import keras
 
@@ -27,7 +27,7 @@ class TFNode:
         self.num: int = num
         self.input_val = 0.
         self.out_val = 0.
-        self.out_conn: List[Connection] = []
+        self.out_conn: List[TFConnection] = []
         self.layer: int = layer
 
         self.is_out: bool = is_out
@@ -82,7 +82,7 @@ class TFNode:
     def get_layer(self) -> int:
         return self.layer
 
-    def get_outgoing_connections(self) -> List[Connection]:
+    def get_outgoing_connections(self) -> List[TFConnection]:
         """
         returns a list of connections that have this Node as their outgoing node.
         """

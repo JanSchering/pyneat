@@ -7,7 +7,7 @@ import gym
 import pybullet_envs
 import pybulletgym
 import numpy as np
-import pyneat.innovationcounter as innovationcounter
+import tfpyneat.innovationcounter as innovationcounter
 import pickle
 import time
 import os
