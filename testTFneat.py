@@ -6,6 +6,8 @@ import tensorflow as tf
 import numpy as np
 import pickle
 
+print(tf.test.gpu_device_name())
+
 innovationcounter.init()
 innovationhistory = []
 genome = TFGenome(num_in=4, num_out=2, crossover=False)

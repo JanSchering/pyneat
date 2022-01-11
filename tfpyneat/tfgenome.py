@@ -125,7 +125,7 @@ class TFGenome:
         bias = np.array([node.bias], dtype="float32")
         bias_tensor = tf.Variable(tf.convert_to_tensor(bias))
 
-        def initializer(shape):
+        def initializer(shape, dtype):
             return bias_tensor
         return initializer
 
@@ -136,7 +136,7 @@ class TFGenome:
         weight_batch = np.array(weights, dtype="float32")[:, np.newaxis]
         weight_tensor = tf.Variable(tf.convert_to_tensor(weight_batch))
 
-        def initializer(shape):
+        def initializer(shape, dtype):
             return weight_tensor
         return initializer
 

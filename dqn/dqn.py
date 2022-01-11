@@ -1,7 +1,9 @@
+# %%
+import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, InputLayer
 from keras.callbacks import TensorBoard
-from keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam
 from collections import deque
 from tsboardmod import ModifiedTensorBoard
 import time
@@ -10,18 +12,17 @@ import random
 import os
 from tqdm import tqdm
 import gym
-import pybullet_envs
-import pybulletgym
+import tensorflow as tf
 
 DISCOUNT = 0.99
 MIN_MEMORY_SIZE = 1_000
-MAX_MEMORY_SIZE = 10_000
+MAX_MEMORY_SIZE = 50_000
 MODEL_NAME = "DQN"
 MINIBATCH_SIZE = 64
 UPDATE_TARGET_EVERY = 5
 
 # Environment settings
-EPISODES = 20_000
+EPISODES = 10_000
 
 # Exploration settings
 epsilon = 1  # not a constant, going to be decayed
@@ -32,7 +33,7 @@ MIN_EPSILON = 0.001
 AGGREGATE_STATS_EVERY = 50  # episodes
 SHOW_PREVIEW = False
 
-MIN_REWARD = 900
+MIN_REWARD = 200
 
 
 class DQNAgent:
@@ -40,17 +41,17 @@ class DQNAgent:
         model = Sequential()
         model.add(InputLayer(input_shape=(obs_dim,)))
 
-        model.add(Dense(10))
+        model.add(Dense(64))
         model.add(Activation('relu'))
         model.add(Dropout(0.2))
 
-        model.add(Dense(5))
+        model.add(Dense(64))
         model.add(Activation('relu'))
         model.add(Dropout(0.2))
 
         model.add(Dense(act_dim, activation='tanh'))
         model.compile(loss="mse", optimizer=Adam(
-            lr=0.001), metrics=['accuracy'])
+            lr=5e-4), metrics=['accuracy'])
         return model
 
     def __init__(self, obs_dim, act_dim):
@@ -139,7 +140,10 @@ class DQNAgent:
 if not os.path.isdir('models'):
     os.makedirs('models')
 
-env = gym.make("MountainCar-v0")
+print("Num GPUs Available: ", len(
+    tf.config.experimental.list_physical_devices('GPU')))
+
+env = gym.make("LunarLander-v2")
 agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
 ep_rewards = []
 
@@ -201,3 +205,5 @@ for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
     if epsilon > MIN_EPSILON:
         epsilon *= EPSILON_DECAY
         epsilon = max(MIN_EPSILON, epsilon)
+
+# %%
