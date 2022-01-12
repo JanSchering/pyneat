@@ -4,8 +4,6 @@ from typing import Any, Callable, List, Tuple
 from tfpyneat import TFGenome
 from tfpyneat import TFPopulation
 import gym
-import pybullet_envs
-import pybulletgym
 import numpy as np
 import tfpyneat.innovationcounter as innovationcounter
 import pickle

@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import Any, Callable, List, Tuple
 from tfpyneat import TFPopulation, TFGenome
+from ..interface_tfneat import eval_genome
 from collections import deque
-from .dqn import MAX_MEMORY_SIZE
+import params
 
 
 class NEATQAgent:
@@ -12,8 +13,5 @@ class NEATQAgent:
 
     def __init__(self, obs_dim: int, act_dim: int):
         self.population = TFPopulation(
-            obs_dim, act_dim, self.run_generation, 50)
-        self.replay_memory = deque(MAX_MEMORY_SIZE)
-
-    def run_generation(self, genome: TFGenome):
-        pass
+            obs_dim, act_dim, eval_genome, 50)
+        self.replay_memory = deque(params.MAX_MEMORY_SIZE)
