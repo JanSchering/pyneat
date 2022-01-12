@@ -3,7 +3,9 @@ import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, InputLayer
 from keras.callbacks import TensorBoard
+from tensorflow.keras import optimizers
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.losses import MeanSquaredError
 from collections import deque
 from tsboardmod import ModifiedTensorBoard
 import time
@@ -44,15 +46,11 @@ class DQNAgent:
 
         model.add(Dense(64))
         model.add(Activation('relu'))
-        model.add(Dropout(0.2))
 
         model.add(Dense(64))
         model.add(Activation('relu'))
-        model.add(Dropout(0.2))
 
         model.add(Dense(act_dim, activation='tanh'))
-        model.compile(loss="mse", optimizer=Adam(
-            lr=5e-4), metrics=['accuracy'])
         return model
 
     def __init__(self, obs_dim, act_dim):
@@ -68,6 +66,9 @@ class DQNAgent:
             log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
         # Used to count when to update target network with main network's weights
         self.update_counter = 0
+
+        self.optimizer = Adam(learning_rate=5e-4)
+        self.loss_function = MeanSquaredError()
 
     def update_replay_memory(self, transition):
         """
@@ -125,9 +126,16 @@ class DQNAgent:
 
         self.update_counter = (self.update_counter + 1) % UPDATE_EVERY
         if self.update_counter == 0:
-            # Fit on all samples as one batch, log only on terminal state
-            self.model.fit(np.array(X), np.array(y), batch_size=MINIBATCH_SIZE, verbose=0,
-                           shuffle=False, callbacks=[self.tensorboard] if terminal_state else None)
+            with tf.GradientTape() as tape:
+                # Forward pass.
+                logits = self.model(np.array(X))
+                # Loss value for this batch.
+                loss_value = self.loss_function(np.array(y), logits)
+            # Get gradients of loss wrt the weights.
+            gradients = tape.gradient(loss_value, self.model.trainable_weights)
+            # Update the weights of the model.
+            self.optimizer.apply_gradients(
+                zip(gradients, self.model.trainable_weights))
 
             # θ_target = τ*θ_local + (1 - τ)*θ_target
             for local_var, target_var in zip(self.model.trainable_variables, self.target_model.trainable_variables):
