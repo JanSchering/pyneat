@@ -16,17 +16,18 @@ import tensorflow as tf
 
 DISCOUNT = 0.99
 MIN_MEMORY_SIZE = 1_000
-MAX_MEMORY_SIZE = 50_000
+MAX_MEMORY_SIZE = int(1e5)
 MODEL_NAME = "DQN"
 MINIBATCH_SIZE = 64
-UPDATE_TARGET_EVERY = 5
+UPDATE_TARGET_EVERY = 4
+TAU = 1e-3  # Interpolation Param
 
 # Environment settings
-EPISODES = 10_000
+EPISODES = 5_000
 
 # Exploration settings
 epsilon = 1  # not a constant, going to be decayed
-EPSILON_DECAY = 0.99975
+EPSILON_DECAY = 0.995
 MIN_EPSILON = 0.001
 
 #  Stats settings
@@ -132,7 +133,9 @@ class DQNAgent:
 
         # If counter reaches set value, update target network with weights of main network
         if self.target_update_counter > UPDATE_TARGET_EVERY:
-            self.target_model.set_weights(self.model.get_weights())
+            # θ_target = τ*θ_local + (1 - τ)*θ_target
+            self.target_model.set_weights(
+                TAU*np.array(self.model.get_weights()) + (1-TAU)*np.array(self.model.get_weights()))
             self.target_update_counter = 0
 
 
