@@ -63,48 +63,47 @@ class DQNAgent:
         """
         Executes the training process for the network
         """
-        # Start training only if certain number of samples is already saved
-        if len(self.replay_memory) < params.MIN_MEMORY_SIZE:
-            return
-
-        # Get a minibatch of random samples from memory replay table
-        minibatch = random.sample(self.replay_memory, params.MINIBATCH_SIZE)
-
-        # Get current states from minibatch, then query NN model for Q values
-        current_states = np.array([transition[0]
-                                  for transition in minibatch])
-        current_qs_list = self.model.predict(current_states)
-
-        # Get future states from minibatch, then query NN model for Q values
-        # When using target network, query it, otherwise main network should be queried
-        new_current_states = np.array(
-            [transition[3] for transition in minibatch])
-        future_qs_list = self.target_model.predict(new_current_states)
-
-        X = []
-        y = []
-
-        # Now we need to enumerate our batches
-        for index, (current_state, action, reward, new_current_state, done) in enumerate(minibatch):
-
-            # If not a terminal state, get new q from future states, otherwise set it to 0
-            # almost like with Q Learning, but we use just part of equation here
-            if not done:
-                max_future_q = np.max(future_qs_list[index])
-                new_q = reward + params.DISCOUNT * max_future_q
-            else:
-                new_q = reward
-
-            # Update Q value for given state
-            current_qs = current_qs_list[index]
-            current_qs[action] = new_q
-
-            # And append to our training data
-            X.append(current_state)
-            y.append(current_qs)
-
         self.update_counter = (self.update_counter + 1) % params.UPDATE_EVERY
-        if self.update_counter == 0:
+        if self.update_counter == 0 and len(self.replay_memory) > params.MIN_MEMORY_SIZE:
+
+            # Get a minibatch of random samples from memory replay table
+            minibatch = random.sample(
+                self.replay_memory, params.MINIBATCH_SIZE)
+
+            # Get current states from minibatch, then query NN model for Q values
+            current_states = np.array([transition[0]
+                                       for transition in minibatch])
+            current_qs_list = self.model.predict(current_states)
+
+            # Get future states from minibatch, then query NN model for Q values
+            # When using target network, query it, otherwise main network should be queried
+            new_current_states = np.array(
+                [transition[3] for transition in minibatch])
+            future_qs_list = self.target_model.predict(new_current_states)
+
+            X = []
+            y = []
+
+            # Now we need to enumerate our batches
+            for index, (current_state, action, reward, new_current_state, done) in enumerate(minibatch):
+
+                # If not a terminal state, get new q from future states, otherwise set it to 0
+                # almost like with Q Learning, but we use just part of equation here
+                if not done:
+                    max_future_q = np.max(future_qs_list[index])
+                    new_q = reward + params.DISCOUNT * max_future_q
+                else:
+                    new_q = reward
+
+                # Update Q value for given state
+                current_qs = current_qs_list[index]
+                current_qs[action] = new_q
+
+                # And append to our training data
+                X.append(current_state)
+                y.append(current_qs)
+
+            # Apply a step of gradient descent on the created dataset
             with tf.GradientTape() as tape:
                 # Forward pass.
                 logits = self.model(np.array(X))
@@ -131,6 +130,7 @@ print("Num GPUs Available: ", len(
     tf.config.experimental.list_physical_devices('GPU')))
 
 env = gym.make("LunarLander-v2")
+env.seed(0)
 agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
 # We will average the rewards over a window of the last 100
 ep_rewards = deque(maxlen=100)
@@ -176,6 +176,7 @@ for episode in tqdm(range(1, params.EPISODES + 1), ascii=True, unit='episodes'):
 
     # Append episode reward to a list and log stats (every given number of episodes)
     ep_rewards.append(episode_reward)
+    print(episode_reward)
     if not episode % params.AGGREGATE_STATS_EVERY or episode == 1:
         mean_reward = np.mean(ep_rewards)
         min_reward = np.min(ep_rewards)

@@ -21,10 +21,11 @@ CSV_HEADER = ["generation, species, highscore"]
 STAT_PATH = os.path.join(os.getcwd(), "stats_tfpyneat")
 
 env = gym.make("LunarLander-v2")
+env.seed(0)
 
 
 def enjoy(genome):
-    env = gym.make("LunarLander-v2")
+    global env
     # Get the initial state of the environment
     observation = env.reset()
     # Track the total score achieved
