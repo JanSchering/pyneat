@@ -19,7 +19,7 @@ MIN_MEMORY_SIZE = 1_000
 MAX_MEMORY_SIZE = int(1e5)
 MODEL_NAME = "DQN"
 MINIBATCH_SIZE = 64
-UPDATE_TARGET_EVERY = 4
+UPDATE_EVERY = 4
 TAU = 1e-3  # Interpolation Param
 
 # Environment settings
@@ -28,13 +28,13 @@ EPISODES = 5_000
 # Exploration settings
 epsilon = 1  # not a constant, going to be decayed
 EPSILON_DECAY = 0.995
-MIN_EPSILON = 0.001
+MIN_EPSILON = 0.01
 
 #  Stats settings
 AGGREGATE_STATS_EVERY = 50  # episodes
 SHOW_PREVIEW = False
 
-MIN_REWARD = 200
+MEAN_REWARD = 200
 
 
 class DQNAgent:
@@ -67,7 +67,7 @@ class DQNAgent:
         self.tensorboard = ModifiedTensorBoard(
             log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
         # Used to count when to update target network with main network's weights
-        self.target_update_counter = 0
+        self.update_counter = 0
 
     def update_replay_memory(self, transition):
         """
@@ -123,20 +123,16 @@ class DQNAgent:
             X.append(current_state)
             y.append(current_qs)
 
-        # Fit on all samples as one batch, log only on terminal state
-        self.model.fit(np.array(X), np.array(y), batch_size=MINIBATCH_SIZE, verbose=0,
-                       shuffle=False, callbacks=[self.tensorboard] if terminal_state else None)
+        self.update_counter = (self.update_counter + 1) % UPDATE_EVERY
+        if self.update_counter == 0:
+            # Fit on all samples as one batch, log only on terminal state
+            self.model.fit(np.array(X), np.array(y), batch_size=MINIBATCH_SIZE, verbose=0,
+                           shuffle=False, callbacks=[self.tensorboard] if terminal_state else None)
 
-        # Update target network counter every episode
-        if terminal_state:
-            self.target_update_counter += 1
-
-        # If counter reaches set value, update target network with weights of main network
-        if self.target_update_counter > UPDATE_TARGET_EVERY:
             # θ_target = τ*θ_local + (1 - τ)*θ_target
-            self.target_model.set_weights(
-                TAU*np.array(self.model.get_weights()) + (1-TAU)*np.array(self.model.get_weights()))
-            self.target_update_counter = 0
+            for local_var, target_var in zip(self.model.trainable_variables, self.target_model.trainable_variables):
+                target_var.assign(TAU*local_var + (1-TAU)*target_var)
+                self.target_update_counter = 0
 
 
 # Create models folder
@@ -148,7 +144,8 @@ print("Num GPUs Available: ", len(
 
 env = gym.make("LunarLander-v2")
 agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
-ep_rewards = []
+# We will average the rewards over a window of the last 100
+ep_rewards = deque(maxlen=100)
 
 # Iterate over episodes
 for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
@@ -175,7 +172,7 @@ for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
 
         new_state, reward, done, info = env.step(action)
 
-        # Transform new continous state to new discrete state and count reward
+        # count reward
         episode_reward += reward
 
         if SHOW_PREVIEW and not episode % AGGREGATE_STATS_EVERY:
@@ -192,17 +189,16 @@ for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
     # Append episode reward to a list and log stats (every given number of episodes)
     ep_rewards.append(episode_reward)
     if not episode % AGGREGATE_STATS_EVERY or episode == 1:
-        average_reward = sum(
-            ep_rewards[-AGGREGATE_STATS_EVERY:])/len(ep_rewards[-AGGREGATE_STATS_EVERY:])
-        min_reward = min(ep_rewards[-AGGREGATE_STATS_EVERY:])
-        max_reward = max(ep_rewards[-AGGREGATE_STATS_EVERY:])
+        mean_reward = np.mean(ep_rewards)
+        min_reward = np.min(ep_rewards)
+        max_reward = np.max(ep_rewards)
         agent.tensorboard.update_stats(
-            reward_avg=average_reward, reward_min=min_reward, reward_max=max_reward, epsilon=epsilon)
+            reward_mean=mean_reward, reward_min=min_reward, reward_max=max_reward, epsilon=epsilon)
 
         # Save model, but only when min reward is greater or equal a set value
-        if min_reward >= MIN_REWARD:
+        if mean_reward >= MEAN_REWARD:
             agent.model.save(
-                f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+                f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{mean_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
 
     # Decay epsilon
     if epsilon > MIN_EPSILON:
