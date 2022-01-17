@@ -5,4 +5,5 @@ genomes/**
 pyneat/__pycache__/**
 dqn/__pycache__/**
 dqn/logs/**
+dqn/models/**
 tfpyneat/__pycache__/**

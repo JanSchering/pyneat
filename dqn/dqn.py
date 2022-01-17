@@ -17,6 +17,8 @@ import gym
 import tensorflow as tf
 import params
 
+epsilon = 1  # not a constant, going to be decayed
+
 
 class DQNAgent:
     def create_model(self, obs_dim, act_dim):
@@ -29,7 +31,7 @@ class DQNAgent:
         model.add(Dense(64))
         model.add(Activation('relu'))
 
-        model.add(Dense(act_dim, activation='tanh'))
+        model.add(Dense(act_dim))
         return model
 
     def __init__(self, obs_dim, act_dim):

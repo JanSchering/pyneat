@@ -12,7 +12,6 @@ TAU = 1e-3  # Interpolation Param
 EPISODES = 5_000
 
 # Exploration settings
-epsilon = 1  # not a constant, going to be decayed
 EPSILON_DECAY = 0.995
 MIN_EPSILON = 0.01
 
@@ -24,5 +23,5 @@ MEAN_REWARD = 200
 
 # NEATQN SPECIFIC
 MAX_GENERATIONS = 500
-
+NQN_MODEL_NAME = "NEATQN"
 RUNS_PER_NET = 5
