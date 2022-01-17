@@ -8,5 +8,5 @@ dqn/logs/**
 dqn/models/**
 tfpyneat/__pycache__/**
 tfpyneat/dqn/__pycache__/**
-tfpyneat/dqn/logs/**
-tfpyneat/dqn/models/**
+logs/**
+models/**

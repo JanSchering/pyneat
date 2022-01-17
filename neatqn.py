@@ -1,19 +1,21 @@
 from __future__ import annotations
-from typing import Any, Callable, List, Tuple
-from tfpyneat.tfpopulation import TFPopulation
-from ..tfgenome import TFGenome
-from ..innovationcounter import init
-from ...interface_tfneat import softmax
-from collections import deque
-import params
-from tsboardmod import ModifiedTensorBoard
-import time
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import MeanSquaredError
-import numpy as np
-import tensorflow as tf
-import random
 import gym
+import random
+import tensorflow as tf
+import numpy as np
+from tensorflow.keras.losses import MeanSquaredError
+from tensorflow.keras.optimizers import Adam
+import time
+from tsboardmod import ModifiedTensorBoard
+import params
+from collections import deque
+from ..innovationcounter import init
+from ..tfgenome import TFGenome
+from ..tfpopulation import TFPopulation
+from typing import Any, Callable, List, Tuple
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 
 class NEATQAgent:
