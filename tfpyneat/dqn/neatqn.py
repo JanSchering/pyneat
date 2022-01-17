@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import Any, Callable, List, Tuple
-from tfpyneat import TFPopulation, TFGenome
-import tfpyneat.innovationcounter as innovationcounter
-from ..interface_tfneat import softmax
+from tfpyneat.tfpopulation import TFPopulation
+from ..tfgenome import TFGenome
+from ..innovationcounter import init
+from ...interface_tfneat import softmax
 from collections import deque
 import params
 from tsboardmod import ModifiedTensorBoard
@@ -30,12 +31,12 @@ class NEATQAgent:
         self.prev_model = None
 
         self.tensorboard = ModifiedTensorBoard(
-            log_dir="logs/NEATQN{}-{}".format(params.MODEL_NAME, int(time.time())))
+            log_dir="logs/{}-{}".format(params.NQN_MODEL_NAME, int(time.time())))
 
         self.optimizer = Adam(learning_rate=5e-4)
         self.loss_function = MeanSquaredError()
 
-        self.innovationcounter = innovationcounter.init()
+        self.innovationcounter = init()
 
         self.best_fitness = float("-inf")
         self.mean_score = float("-inf")
@@ -105,9 +106,11 @@ class NEATQAgent:
                 zip(gradients, self.model.trainable_weights))
 
     def evolve(self):
+        new_structure = False
         self.population.natural_selection()
         # Check if a new predominant structure evolved
         if self.population.best_score > self.best_fitness:
+            new_structure = True
             self.prev_model = self.model
             self.model = self.population.best_genome.create_model()
 
@@ -130,7 +133,7 @@ class NEATQAgent:
         if mean_score > self.mean_score:
             self.mean_score = mean_score
         # New structure has not empirically proven better than old, discard
-        else:
+        elif new_structure:
             self.model = self.prev_model
         return self.mean_score
 
