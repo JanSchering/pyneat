@@ -23,7 +23,7 @@ class TFSpecies:
         # Compatibility Distance factors
         self.excess_coeff = 1.5
         self.weight_diff_coeff = 0.5
-        self.compat_thres = 1
+        self.compat_thres = 2
 
         if genome:
             self.genomes.append(genome)
@@ -149,11 +149,11 @@ class TFSpecies:
         Select a Genome based on fitness
         """
         self.sort_by_fitness()
-        chance = 0.7
+        chance = 0.75
         for genome in reversed(self.genomes):
             if random.uniform(0, 1) < chance:
                 return genome
-            chance /= 2
+            chance /= 1.2
 
         return self.genomes[-1]
 

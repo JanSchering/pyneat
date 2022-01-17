@@ -12,7 +12,7 @@ class Activation(Enum):
     TANH = "tanh"
     RELU = "relu"
     CLAMPED = "clamped"
-    SOFTMAX = "sofmax"
+    IDENTITY = "identity"
 
 
 class TFNode:
@@ -34,7 +34,7 @@ class TFNode:
 
         self.bias = random.uniform(-1, 1)
         if is_out:
-            self.activation = Activation.SOFTMAX
+            self.activation = Activation.IDENTITY
         else:
             self.activation = Activation.RELU
 
@@ -122,7 +122,7 @@ class TFNode:
             return math.tanh(x)
         elif self.activation == Activation.CLAMPED:
             return 1 if x > 1 else -1 if x < -1 else x
-        elif self.activation == Activation.SOFTMAX:
+        elif self.activation == Activation.IDENTITY:
             return x
 
     def get_tfactivation(self):
@@ -132,5 +132,5 @@ class TFNode:
             return keras.activations.tanh
         elif self.activation == Activation.RELU:
             return keras.activations.relu
-        elif self.activation == Activation.SOFTMAX:
-            return keras.activations.softmax
+        elif self.activation == Activation.IDENTITY:
+            return None

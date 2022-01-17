@@ -9,13 +9,9 @@ import time
 from tsboardmod import ModifiedTensorBoard
 import params
 from collections import deque
-from ..innovationcounter import init
-from ..tfgenome import TFGenome
-from ..tfpopulation import TFPopulation
+from tfpyneat import TFPopulation, TFGenome
+import tfpyneat.innovationcounter as innovationcounter
 from typing import Any, Callable, List, Tuple
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 
 class NEATQAgent:
@@ -24,10 +20,11 @@ class NEATQAgent:
     """
 
     def __init__(self, obs_dim: int, act_dim: int):
+        self.innovationcounter = innovationcounter.init()
         self.population = TFPopulation(
-            obs_dim, act_dim, self.eval_genome, 50)
+            obs_dim, act_dim, self.eval_genome, 100)
 
-        self.replay_memory = deque(params.MAX_MEMORY_SIZE)
+        self.replay_memory = deque(maxlen=params.MAX_MEMORY_SIZE)
 
         self.model = None
         self.prev_model = None
@@ -37,8 +34,6 @@ class NEATQAgent:
 
         self.optimizer = Adam(learning_rate=5e-4)
         self.loss_function = MeanSquaredError()
-
-        self.innovationcounter = init()
 
         self.best_fitness = float("-inf")
         self.mean_score = float("-inf")
@@ -53,7 +48,7 @@ class NEATQAgent:
     def get_qs(self, state):
         return self.model.predict(np.array(state).reshape(-1, *state.shape))[0]
 
-    def train(self, terminal_state, step):
+    def train(self):
         """
         Executes the training process for the network. The network is trained on 1000 batches of random samples.
         """
@@ -137,7 +132,7 @@ class NEATQAgent:
         # New structure has not empirically proven better than old, discard
         elif new_structure:
             self.model = self.prev_model
-        return self.mean_score
+        return (mean_score, np.max(scores), np.min(scores))
 
     def eval_genome(self, genome: TFGenome) -> float:
         """
@@ -157,7 +152,7 @@ class NEATQAgent:
                 observation, reward, done, info = env.step(np.argmax(outputs))
                 fitness += reward
             fitnesses.append(fitness)
-        return (np.mean(fitnesses), np.max(fitnesses), np.min(fitnesses))
+        return np.mean(fitnesses)
 
 
 env = gym.make("LunarLander-v2")
@@ -165,10 +160,18 @@ env.seed(0)
 agent = NEATQAgent(env.observation_space.shape[0], env.action_space.n)
 
 for gen in range(params.MAX_GENERATIONS):
-    # The first 200 Gens, we purely evolve on an evolutionary timescale
+    # The first 100 Gens, we purely evolve on an evolutionary timescale
     # Allows to build some structure and to collect memory data
     if gen < 200:
         agent.population.natural_selection()
+        genome = agent.population.best_genome
+        layers = genome.layers
+        num_species = len(agent.population.species)
+        num_layers = set()
+        for g in agent.population.genomes:
+            num_layers.add(g.layers)
+        print(
+            f"GEN: {gen+1} SPECIES: {num_species} TEST: {num_layers} FITNESS: {agent.population.best_genome.unadjusted_fitness} LAYERS: {layers} NODES: {len(genome.nodes)}")
     else:
         mean_score, max_score, min_score = agent.evolve()
         print(

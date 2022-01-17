@@ -244,6 +244,7 @@ class TFGenome:
             for conn in self.connections:
                 conn.mutate_weight()
 
+        # 50% chance to mutate the bias parameter of each node
         if random.uniform(0, 1) < 0.5:
             for node in self.nodes:
                 node.mutate_bias()
@@ -258,7 +259,7 @@ class TFGenome:
             self.add_connection(innovationhistory)
 
         # 1% chance that the genome mutates and adds a new Node
-        if random.uniform(0, 1) < 0.1:
+        if random.uniform(0, 1) < 0.01:
             self.add_node(innovationhistory)
 
     def add_node(self, innovationhistory) -> None:
