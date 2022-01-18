@@ -104,6 +104,7 @@ class TFGenome:
         else:
             out = keras.layers.Concatenate()(output_nodes)
         self.model = keras.Model(inputs=inputs, outputs=out)
+        return self.model
 
     def fully_connect(self, innovationhistory):
         """
@@ -245,7 +246,7 @@ class TFGenome:
                 conn.mutate_weight()
 
         # 50% chance to mutate the bias parameter of each node
-        if random.uniform(0, 1) < 0.5:
+        if random.uniform(0, 1) < 0.6:
             for node in self.nodes:
                 node.mutate_bias()
 
@@ -259,7 +260,7 @@ class TFGenome:
             self.add_connection(innovationhistory)
 
         # 1% chance that the genome mutates and adds a new Node
-        if random.uniform(0, 1) < 0.01:
+        if random.uniform(0, 1) < 0.05:
             self.add_node(innovationhistory)
 
     def add_node(self, innovationhistory) -> None:
@@ -298,7 +299,7 @@ class TFGenome:
         new_node.layer = conn.node_in.layer+1
 
         # Check if the connection was a direct connection or a long connection
-        # If direct connection, we added a new layer and every higher layer has to be incremented
+        # If direct connection, we added a new layer and have to adapt the layer numbers in the network
         if new_node.layer == conn.node_out.layer:
             for node in self.nodes:
                 if node.layer >= new_node.layer:

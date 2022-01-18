@@ -34,12 +34,18 @@ class DQNAgent:
         model.add(Dense(act_dim))
         return model
 
-    def __init__(self, obs_dim, act_dim):
-        # Main model
-        self.model = self.create_model(obs_dim, act_dim)
-        # Target network
-        self.target_model = self.create_model(obs_dim, act_dim)
-        self.target_model.set_weights(self.model.get_weights())
+    def __init__(self, obs_dim, act_dim, models=None):
+        # allow the user to provide a custom tuple of main/target models
+        if models:
+            self.model = models[0]
+            self.target_model = models[1]
+        # If no custom models are given, use standardized network
+        else:
+            # Main model
+            self.model = self.create_model(obs_dim, act_dim)
+            # Target network
+            self.target_model = self.create_model(obs_dim, act_dim)
+            self.target_model.set_weights(self.model.get_weights())
         # An array with last n steps for training
         self.replay_memory = deque(maxlen=params.MAX_MEMORY_SIZE)
         # Custom tensorboard object
@@ -124,76 +130,79 @@ class DQNAgent:
                 self.target_update_counter = 0
 
 
-# Create models folder
-if not os.path.isdir('models'):
-    os.makedirs('models')
+def run_dqn(agent: DQNAgent, env: gym.Env):
+    # Create models folder
+    if not os.path.isdir('models'):
+        os.makedirs('models')
 
-print("Num GPUs Available: ", len(
-    tf.config.experimental.list_physical_devices('GPU')))
+    print("Num GPUs Available: ", len(
+        tf.config.experimental.list_physical_devices('GPU')))
 
-env = gym.make("LunarLander-v2")
-env.seed(0)
-agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
-# We will average the rewards over a window of the last 100
-ep_rewards = deque(maxlen=100)
+    # We will average the rewards over a window of the last 100
+    ep_rewards = deque(maxlen=100)
 
-# Iterate over episodes
-for episode in tqdm(range(1, params.EPISODES + 1), ascii=True, unit='episodes'):
+    # Iterate over episodes
+    for episode in tqdm(range(1, params.EPISODES + 1), ascii=True, unit='episodes'):
 
-    # Update tensorboard step every episode
-    agent.tensorboard.step = episode
+        # Update tensorboard step every episode
+        agent.tensorboard.step = episode
 
-    # Restarting episode - reset episode reward and step number
-    episode_reward = 0
-    step = 1
+        # Restarting episode - reset episode reward and step number
+        episode_reward = 0
+        step = 1
 
-    # Reset environment and get initial state
-    current_state = env.reset()
+        # Reset environment and get initial state
+        current_state = env.reset()
 
-    # Reset flag and start iterating until episode ends
-    done = False
-    while not done:
-        if np.random.random() > epsilon:
-            # Get action from Q table
-            action = np.argmax(agent.get_qs(current_state))
-        else:
-            # Get random action
-            action = env.action_space.sample()
+        # Reset flag and start iterating until episode ends
+        done = False
+        while not done:
+            if np.random.random() > epsilon:
+                # Get action from Q table
+                action = np.argmax(agent.get_qs(current_state))
+            else:
+                # Get random action
+                action = env.action_space.sample()
 
-        new_state, reward, done, info = env.step(action)
+            new_state, reward, done, info = env.step(action)
 
-        # count reward
-        episode_reward += reward
+            # count reward
+            episode_reward += reward
 
-        if params.SHOW_PREVIEW and not episode % params.AGGREGATE_STATS_EVERY:
-            env.render()
+            if params.SHOW_PREVIEW and not episode % params.AGGREGATE_STATS_EVERY:
+                env.render()
 
-        # Every step we update replay memory and train main network
-        agent.update_replay_memory(
-            (current_state, action, reward, new_state, done))
-        agent.train(done, step)
+            # Every step we update replay memory and train main network
+            agent.update_replay_memory(
+                (current_state, action, reward, new_state, done))
+            agent.train(done, step)
 
-        current_state = new_state
-        step += 1
+            current_state = new_state
+            step += 1
 
-    # Append episode reward to a list and log stats (every given number of episodes)
-    ep_rewards.append(episode_reward)
-    print(episode_reward)
-    if not episode % params.AGGREGATE_STATS_EVERY or episode == 1:
-        mean_reward = np.mean(ep_rewards)
-        min_reward = np.min(ep_rewards)
-        max_reward = np.max(ep_rewards)
-        agent.tensorboard.update_stats(
-            reward_mean=mean_reward, reward_min=min_reward, reward_max=max_reward, epsilon=epsilon)
+        # Append episode reward to a list and log stats (every given number of episodes)
+        ep_rewards.append(episode_reward)
+        print(episode_reward)
+        if not episode % params.AGGREGATE_STATS_EVERY or episode == 1:
+            mean_reward = np.mean(ep_rewards)
+            min_reward = np.min(ep_rewards)
+            max_reward = np.max(ep_rewards)
+            agent.tensorboard.update_stats(
+                reward_mean=mean_reward, reward_min=min_reward, reward_max=max_reward, epsilon=epsilon)
 
-        # Save model, but only when min reward is greater or equal a set value
-        if mean_reward >= params.MEAN_REWARD:
-            agent.model.save(
-                f'models/{params.MODEL_NAME}__{max_reward:_>7.2f}max_{mean_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+            # Save model, but only when min reward is greater or equal a set value
+            if mean_reward >= params.MEAN_REWARD:
+                agent.model.save(
+                    f'models/{params.MODEL_NAME}__{max_reward:_>7.2f}max_{mean_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
 
-    # Decay epsilon
-    if epsilon > params.MIN_EPSILON:
-        epsilon *= params.EPSILON_DECAY
-        epsilon = max(params.MIN_EPSILON, epsilon)
+        # Decay epsilon
+        if epsilon > params.MIN_EPSILON:
+            epsilon *= params.EPSILON_DECAY
+            epsilon = max(params.MIN_EPSILON, epsilon)
 
-# %%
+
+if __name__ == "__main__":
+    env = gym.make("LunarLander-v2")
+    env.seed(0)
+    agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
+    run_dqn(agent, env)
