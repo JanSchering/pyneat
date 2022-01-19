@@ -53,11 +53,10 @@ for gen in range(params.MAX_GENERATIONS):
     for g in population.genomes:
         layer_info.add(g.layers)
     score = population.best_genome.unadjusted_fitness
-    num_out = len([n for n in population.best_genome.nodes if n.is_out])
     num_nodes = len(population.best_genome.nodes)
     best_layers = population.best_genome.layers
     num_species = len(population.species)
-    print(f"GEN: {gen+1} SCORE: {score} SPECIES: {num_species} LAYERS: {layer_info} NUM_OUT: {num_out} L: {best_layers} NODES: {num_nodes}")
+    print(f"GEN: {gen+1} SCORE: {score} SPECIES: {num_species} LAYERS: {layer_info}  L: {best_layers} NODES: {num_nodes}")
 
 main_model = population.best_genome.create_model()
 target_model = population.best_genome.create_model()

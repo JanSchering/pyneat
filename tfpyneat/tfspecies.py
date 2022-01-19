@@ -22,8 +22,8 @@ class TFSpecies:
 
         # Compatibility Distance factors
         self.excess_coeff = 2
-        self.weight_diff_coeff = 0.5
-        self.compat_thres = 1.5
+        self.weight_diff_coeff = 1
+        self.compat_thres = 3
 
         if genome:
             self.genomes.append(genome)

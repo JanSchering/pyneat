@@ -32,8 +32,8 @@ class TFPopulation:
         # Create the initial population of genomes
         for i in range(size_pop):
             genome = TFGenome(size_in, size_out, False)
-            genome.fully_connect(self.innovationhistory)
-            genome.connect_nodes()
+            # genome.fully_connect(self.innovationhistory)
+            # genome.connect_nodes()
             genome.mutate_genome(self.innovationhistory)
             self.genomes.append(genome)
 
@@ -161,8 +161,8 @@ class TFPopulation:
         """
         Kills species that havent made improvements in 15 generations
         """
-        # For every species apart from the top 4
-        for spec in self.species[:-3]:
+        # For every species apart from the top
+        for spec in self.species[:-1]:
             if spec.gens_wo_change > 15:
                 self.species.remove(spec)
 
