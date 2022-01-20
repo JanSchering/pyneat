@@ -1,9 +1,6 @@
 # %%
-import keras
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, InputLayer
-from keras.callbacks import TensorBoard
-from tensorflow.keras import optimizers
+from keras.layers import Dense, Activation, InputLayer
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import MeanSquaredError
 from collections import deque
@@ -16,8 +13,7 @@ from tqdm import tqdm
 import gym
 import tensorflow as tf
 import params
-
-epsilon = 1  # not a constant, going to be decayed
+import argparse
 
 
 class DQNAgent:
@@ -130,7 +126,8 @@ class DQNAgent:
                 self.target_update_counter = 0
 
 
-def run_dqn(agent: DQNAgent, env: gym.Env):
+def run_dqn(agent: DQNAgent, env: gym.Env, partially_observable=False):
+    epsilon = 1  # not a constant, going to be decayed
     # Create models folder
     if not os.path.isdir('models'):
         os.makedirs('models')
@@ -153,6 +150,9 @@ def run_dqn(agent: DQNAgent, env: gym.Env):
 
         # Reset environment and get initial state
         current_state = env.reset()
+        # If partially observable, we remove the position observations from the state vector
+        if partially_observable:
+            current_state = current_state[2:]
 
         # Reset flag and start iterating until episode ends
         done = False
@@ -165,6 +165,9 @@ def run_dqn(agent: DQNAgent, env: gym.Env):
                 action = env.action_space.sample()
 
             new_state, reward, done, info = env.step(action)
+            # If partially observable we also have to remove the position info from the new state
+            if partially_observable:
+                new_state = new_state[2:]
 
             # count reward
             episode_reward += reward
@@ -182,7 +185,6 @@ def run_dqn(agent: DQNAgent, env: gym.Env):
 
         # Append episode reward to a list and log stats (every given number of episodes)
         ep_rewards.append(episode_reward)
-        print(episode_reward)
         if not episode % params.AGGREGATE_STATS_EVERY or episode == 1:
             mean_reward = np.mean(ep_rewards)
             min_reward = np.min(ep_rewards)
@@ -202,7 +204,20 @@ def run_dqn(agent: DQNAgent, env: gym.Env):
 
 
 if __name__ == "__main__":
+    # For more repetitive results
+    random.seed(1)
+    np.random.seed(1)
+    tf.random.set_seed(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--partial-observe', dest='partially_observable',
+                        default=False, action='store_true')
+    args = parser.parse_args()
     env = gym.make("LunarLander-v2")
     env.seed(0)
-    agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
-    run_dqn(agent, env)
+    if args.partially_observable:
+        agent = DQNAgent(env.observation_space.shape[0]-2, env.action_space.n)
+    else:
+        agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
+    run_dqn(agent, env, args.partially_observable)
+
+# %%
