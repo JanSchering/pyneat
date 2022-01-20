@@ -9,7 +9,7 @@ UPDATE_EVERY = 4
 TAU = 1e-3  # Interpolation Param
 
 # Environment settings
-EPISODES = 5_000
+EPISODES = 2_000
 
 # Exploration settings
 EPSILON_DECAY = 0.995

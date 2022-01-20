@@ -126,7 +126,7 @@ class DQNAgent:
                 self.target_update_counter = 0
 
 
-def run_dqn(agent: DQNAgent, env: gym.Env, partially_observable=False):
+def run_dqn(agent: DQNAgent, env: gym.Env, partially_observable=False, noisy=False):
     epsilon = 1  # not a constant, going to be decayed
     # Create models folder
     if not os.path.isdir('models'):
@@ -154,6 +154,9 @@ def run_dqn(agent: DQNAgent, env: gym.Env, partially_observable=False):
         if partially_observable:
             current_state = current_state[2:]
 
+        if noisy:
+            current_state += np.random.normal(0, 0.1, len(current_state))
+
         # Reset flag and start iterating until episode ends
         done = False
         while not done:
@@ -168,6 +171,9 @@ def run_dqn(agent: DQNAgent, env: gym.Env, partially_observable=False):
             # If partially observable we also have to remove the position info from the new state
             if partially_observable:
                 new_state = new_state[2:]
+
+            if noisy:
+                new_state += np.random.normal(0, 0.1, len(new_state))
 
             # count reward
             episode_reward += reward
@@ -211,13 +217,33 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--partial-observe', dest='partially_observable',
                         default=False, action='store_true')
+    parser.add_argument('--noisy', dest='noisy',
+                        default=False, action='store_true')
+    parser.add_argument('--run-all', dest='run_all',
+                        default=False, action='store_true')
     args = parser.parse_args()
     env = gym.make("LunarLander-v2")
     env.seed(0)
-    if args.partially_observable:
-        agent = DQNAgent(env.observation_space.shape[0]-2, env.action_space.n)
-    else:
+    if args.run_all:
         agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
-    run_dqn(agent, env, args.partially_observable)
+        #run_dqn(agent, env)
+        agent.tensorboard = ModifiedTensorBoard(
+            log_dir="logs/{}_NOISY-{}".format(params.MODEL_NAME, int(time.time())))
+        run_dqn(agent, env, partially_observable=False, noisy=True)
+        agent = DQNAgent(env.observation_space.shape[0]-2, env.action_space.n)
+        agent.tensorboard = ModifiedTensorBoard(
+            log_dir="logs/{}_PARTIAL-{}".format(params.MODEL_NAME, int(time.time())))
+        run_dqn(agent, env, partially_observable=True)
+        ModifiedTensorBoard(
+            log_dir="logs/{}_NOISYPARTIAL-{}".format(params.MODEL_NAME, int(time.time())))
+        run_dqn(agent, env, partially_observable=True, noisy=True)
+    else:
+        if args.partially_observable:
+            agent = DQNAgent(
+                env.observation_space.shape[0]-2, env.action_space.n)
+        else:
+            agent = DQNAgent(
+                env.observation_space.shape[0], env.action_space.n)
+        run_dqn(agent, env, args.partially_observable, args.noisy)
 
 # %%
