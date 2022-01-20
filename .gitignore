@@ -10,3 +10,4 @@ tfpyneat/__pycache__/**
 tfpyneat/dqn/__pycache__/**
 logs/**
 models/**
+data/**
