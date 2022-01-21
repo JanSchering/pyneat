@@ -18,7 +18,7 @@ import argparse
 
 
 class DQNAgent:
-    def create_q_model(self, obs_dim:int, act_dim:int) -> Sequential:
+    def create_q_model(self, obs_dim: int, act_dim: int) -> Sequential:
         """Creates a TF Sequential NN that approximates a mapping
         from state to expected value of the possible actions.
 
@@ -40,8 +40,8 @@ class DQNAgent:
 
         model.add(Dense(act_dim))
         return model
-    
-    def create_estimator(self, dim:int) -> Sequential:
+
+    def create_estimator(self, dim: int) -> Sequential:
         """Creates a TF Sequential NN that tries to denoise the state space.
 
         Args:
@@ -65,7 +65,7 @@ class DQNAgent:
         # Target network
         self.target_model = self.create_q_model(obs_dim, act_dim)
         self.target_model.set_weights(self.model.get_weights())
-        # create state estimator networkk 
+        # create state estimator networkk
         self.estimator = self.create_estimator(obs_dim)
         # An array with last n steps for training
         self.replay_memory = deque(maxlen=params.MAX_MEMORY_SIZE)
@@ -78,15 +78,15 @@ class DQNAgent:
         self.optimizer = Adam(learning_rate=5e-4)
         self.loss_function = MeanSquaredError()
 
-    def update_replay_memory(self, transition:Tuple[np.ndarray, int, np.ndarray, bool]) -> None:
+    def update_replay_memory(self, transition: Tuple[np.ndarray, int, np.ndarray, bool]) -> None:
         """Adds step's data to a memory replay array
-        
+
         Args:
             transition: (state, action, reward, next_state, done)
         """
         self.replay_memory.append(transition)
 
-    def get_qs(self, state:np.ndarray) -> np.ndarray:
+    def get_qs(self, state: np.ndarray) -> np.ndarray:
         """Queries the main Q network for Q values of the given state. 
 
         Args:
@@ -97,7 +97,7 @@ class DQNAgent:
         """
         return self.model.predict(np.array(state).reshape(-1, *state.shape))[0]
 
-    def train(self, terminal_state:bool, step:int) -> None:
+    def train(self, terminal_state: bool, step: int) -> None:
         """Executes the training process for the network
 
         Args:
@@ -111,26 +111,27 @@ class DQNAgent:
             self.replay_memory, params.MINIBATCH_SIZE)
         # First collect all current states from batch
         current_states = np.array([transition[0]
-                                       for transition in minibatch])
+                                   for transition in minibatch])
         # Collect all next_states from batch
         new_current_states = np.array(
-                [transition[3] for transition in minibatch])
+            [transition[3] for transition in minibatch])
         # Apply a step of gradient descent on the weights of the state estimator
         with tf.GradientTape() as tape:
             # predict next states using the estimator
             preds = self.estimator(np.array(current_states))
             # Loss value for this batch.
-            loss_value = self.loss_function(np.array(new_current_states), preds)
+            loss_value = self.loss_function(
+                np.array(new_current_states), preds)
         # Get gradients of loss wrt the weights.
         gradients = tape.gradient(loss_value, self.estimator.trainable_weights)
         # Update the weights of the model.
         self.optimizer.apply_gradients(
             zip(gradients, self.estimator.trainable_weights))
-        
+
         # If counter hits target, update the policy networks
         self.update_counter = (self.update_counter + 1) % params.UPDATE_EVERY
         if self.update_counter == 0 and len(self.replay_memory) > params.MIN_MEMORY_SIZE:
-            # Get an estimate of the current state 
+            # Get an estimate of the current state
             state_estimate = self.estimator.predict(current_states)
             # Query main model for Q values of the current states
             current_qs_list = self.model.predict(state_estimate)
@@ -178,14 +179,15 @@ class DQNAgent:
                 self.target_update_counter = 0
 
 
-def run_dqn(agent: DQNAgent, env: gym.Env, partially_observable=False, noisy=False) -> None:
+def run_dqn(agent: DQNAgent, env: gym.Env, noisy=False, no_pos=False, no_vel=False) -> None:
     """Implementation of the Deep Q Learning algorithm
 
     Args:
         agent (DQNAgent): Agent to train
         env (gym.Env): the environment to train the agent on.
-        partially_observable (bool, optional): Defaults to False.
         noisy (bool, optional): Defaults to False.
+        no_pos (bool, optional): Defaults to False.
+        no_vel (bool, optional): Defaults to False.
     """
     epsilon = 1  # not a constant, going to be decayed
     # Create models folder
@@ -211,8 +213,10 @@ def run_dqn(agent: DQNAgent, env: gym.Env, partially_observable=False, noisy=Fal
         # Reset environment and get initial state
         current_state = env.reset()
         # If partially observable, we remove the position observations from the state vector
-        if partially_observable:
+        if no_pos:
             current_state = current_state[2:]
+        elif no_vel:
+            del current_state[2:4]
 
         if noisy:
             current_state += np.random.normal(0, 0.1, len(current_state))
@@ -229,8 +233,10 @@ def run_dqn(agent: DQNAgent, env: gym.Env, partially_observable=False, noisy=Fal
 
             new_state, reward, done, info = env.step(action)
             # If partially observable we also have to remove the position info from the new state
-            if partially_observable:
+            if no_pos:
                 new_state = new_state[2:]
+            elif no_vel:
+                del new_state[2:4]
 
             if noisy:
                 new_state += np.random.normal(0, 0.1, len(new_state))
@@ -270,42 +276,32 @@ def run_dqn(agent: DQNAgent, env: gym.Env, partially_observable=False, noisy=Fal
 
 
 if __name__ == "__main__":
-    # For more repetitive results
-    random.seed(1)
-    np.random.seed(1)
-    tf.random.set_seed(1)
     parser = argparse.ArgumentParser()
-    parser.add_argument('--partial-observe', dest='partially_observable',
+    parser.add_argument('--partial-no-pos', dest='no_pos',
+                        default=False, action='store_true')
+    parser.add_argument('--partial-no-vel', dest='no_vel',
                         default=False, action='store_true')
     parser.add_argument('--noisy', dest='noisy',
                         default=False, action='store_true')
-    parser.add_argument('--run-all', dest='run_all',
-                        default=False, action='store_true')
     args = parser.parse_args()
+    env = gym.make("LunarLander-v2")
+    # Set random seeds for comparable results between different trainng runs
+    env.seed(1)
+    random.seed(1)
+    np.random.seed(1)
+    tf.random.set_seed(1)
+
     if args.noisy:
         print("using noisy state measurements")
-    env = gym.make("LunarLander-v2")
-    env.seed(0)
-    if args.run_all:
-        agent = DQNAgent(env.observation_space.shape[0], env.action_space.n)
-        #run_dqn(agent, env)
-        agent.tensorboard = ModifiedTensorBoard(
-            log_dir="logs/{}_NOISY-{}".format(params.MODEL_NAME, int(time.time())))
-        run_dqn(agent, env, partially_observable=False, noisy=True)
-        agent = DQNAgent(env.observation_space.shape[0]-2, env.action_space.n)
-        agent.tensorboard = ModifiedTensorBoard(
-            log_dir="logs/{}_PARTIAL-{}".format(params.MODEL_NAME, int(time.time())))
-        run_dqn(agent, env, partially_observable=True)
-        ModifiedTensorBoard(
-            log_dir="logs/{}_NOISYPARTIAL-{}".format(params.MODEL_NAME, int(time.time())))
-        run_dqn(agent, env, partially_observable=True, noisy=True)
+
+    # Adjust network architecture if partially observable
+    if args.no_pos or args.no_vel:
+        agent = DQNAgent(
+            env.observation_space.shape[0]-2, env.action_space.n)
     else:
-        if args.partially_observable:
-            agent = DQNAgent(
-                env.observation_space.shape[0]-2, env.action_space.n)
-        else:
-            agent = DQNAgent(
-                env.observation_space.shape[0], env.action_space.n)
-        run_dqn(agent, env, args.partially_observable, args.noisy)
+        agent = DQNAgent(
+            env.observation_space.shape[0], env.action_space.n)
+
+    run_dqn(agent, env, args.noisy, args.no_pos, args.no_vel)
 
 # %%
