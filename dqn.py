@@ -57,6 +57,7 @@ class DQNAgent:
         model.add(Activation('relu'))
 
         model.add(Dense(dim))
+        return model
 
     def __init__(self, obs_dim, act_dim):
         # Main model
@@ -103,6 +104,8 @@ class DQNAgent:
             terminal_state (bool): Whether the current episode has reached a terminal state
             step (int): The current step of the episode
         """
+        if len(self.replay_memory) < params.MINIBATCH_SIZE:
+            return
         # Get a minibatch of random samples from memory replay table
         minibatch = random.sample(
             self.replay_memory, params.MINIBATCH_SIZE)
