@@ -41,32 +41,12 @@ class DQNAgent:
         model.add(Dense(act_dim))
         return model
 
-    def create_estimator(self, dim: int) -> Sequential:
-        """Creates a TF Sequential NN that tries to denoise the state space.
-
-        Args:
-            dim (int): DImensionality of the state space
-
-        Returns:
-            Sequential: the model.
-        """
-        model = Sequential()
-        model.add(InputLayer(input_shape=(dim,)))
-
-        model.add(Dense(32))
-        model.add(Activation('relu'))
-
-        model.add(Dense(dim))
-        return model
-
     def __init__(self, obs_dim, act_dim):
         # Main model
         self.model = self.create_q_model(obs_dim, act_dim)
         # Target network
         self.target_model = self.create_q_model(obs_dim, act_dim)
         self.target_model.set_weights(self.model.get_weights())
-        # create state estimator networkk
-        self.estimator = self.create_estimator(obs_dim)
         # An array with last n steps for training
         self.replay_memory = deque(maxlen=params.MAX_MEMORY_SIZE)
         # Custom tensorboard object
@@ -104,39 +84,23 @@ class DQNAgent:
             terminal_state (bool): Whether the current episode has reached a terminal state
             step (int): The current step of the episode
         """
-        if len(self.replay_memory) < params.MINIBATCH_SIZE:
-            return
-        # Get a minibatch of random samples from memory replay table
-        minibatch = random.sample(
-            self.replay_memory, params.MINIBATCH_SIZE)
-        # First collect all current states from batch
-        current_states = np.array([transition[0]
-                                   for transition in minibatch])
-        # Collect all next_states from batch
-        new_current_states = np.array(
-            [transition[3] for transition in minibatch])
-        # Apply a step of gradient descent on the weights of the state estimator
-        with tf.GradientTape() as tape:
-            # predict next states using the estimator
-            preds = self.estimator(np.array(current_states))
-            # Loss value for this batch.
-            loss_value = self.loss_function(
-                np.array(new_current_states), preds)
-        # Get gradients of loss wrt the weights.
-        gradients = tape.gradient(loss_value, self.estimator.trainable_weights)
-        # Update the weights of the model.
-        self.optimizer.apply_gradients(
-            zip(gradients, self.estimator.trainable_weights))
-
         # If counter hits target, update the policy networks
         self.update_counter = (self.update_counter + 1) % params.UPDATE_EVERY
         if self.update_counter == 0 and len(self.replay_memory) > params.MIN_MEMORY_SIZE:
-            # Get an estimate of the current state
-            state_estimate = self.estimator.predict(current_states)
+            # Get a minibatch of random samples from memory replay table
+            minibatch = random.sample(
+                self.replay_memory, params.MINIBATCH_SIZE)
+            # First collect all current states from batch
+            current_states = np.array([transition[0]
+                                       for transition in minibatch])
+            # Collect all next_states from batch
+            new_current_states = np.array(
+                [transition[3] for transition in minibatch])
+
             # Query main model for Q values of the current states
-            current_qs_list = self.model.predict(state_estimate)
+            current_qs_list = self.model.predict(current_states)
             # Get future states from minibatch, then query target policy model for Q values
-            future_qs_list = self.target_model.predict(state_estimate)
+            future_qs_list = self.target_model.predict(new_current_states)
 
             X = []
             y = []
@@ -179,7 +143,7 @@ class DQNAgent:
                 self.target_update_counter = 0
 
 
-def run_dqn(agent: DQNAgent, env: gym.Env, noisy=False, no_pos=False, no_vel=False) -> None:
+def run_dqn(agent: DQNAgent, env: gym.Env, no_pos=False, no_vel=False) -> None:
     """Implementation of the Deep Q Learning algorithm
 
     Args:
@@ -218,9 +182,6 @@ def run_dqn(agent: DQNAgent, env: gym.Env, noisy=False, no_pos=False, no_vel=Fal
         elif no_vel:
             del current_state[2:4]
 
-        if noisy:
-            current_state += np.random.normal(0, 0.1, len(current_state))
-
         # Reset flag and start iterating until episode ends
         done = False
         while not done:
@@ -237,9 +198,6 @@ def run_dqn(agent: DQNAgent, env: gym.Env, noisy=False, no_pos=False, no_vel=Fal
                 new_state = new_state[2:]
             elif no_vel:
                 del new_state[2:4]
-
-            if noisy:
-                new_state += np.random.normal(0, 0.1, len(new_state))
 
             # count reward
             episode_reward += reward
@@ -281,8 +239,6 @@ if __name__ == "__main__":
                         default=False, action='store_true')
     parser.add_argument('--partial-no-vel', dest='no_vel',
                         default=False, action='store_true')
-    parser.add_argument('--noisy', dest='noisy',
-                        default=False, action='store_true')
     args = parser.parse_args()
     env = gym.make("LunarLander-v2")
     # Set random seeds for comparable results between different trainng runs
@@ -290,9 +246,6 @@ if __name__ == "__main__":
     random.seed(1)
     np.random.seed(1)
     tf.random.set_seed(1)
-
-    if args.noisy:
-        print("using noisy state measurements")
 
     # Adjust network architecture if partially observable
     if args.no_pos or args.no_vel:
@@ -302,6 +255,6 @@ if __name__ == "__main__":
         agent = DQNAgent(
             env.observation_space.shape[0], env.action_space.n)
 
-    run_dqn(agent, env, args.noisy, args.no_pos, args.no_vel)
+    run_dqn(agent, env, args.no_pos, args.no_vel)
 
 # %%
