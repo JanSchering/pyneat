@@ -180,7 +180,7 @@ def run_dqn(agent: DQNAgent, env: gym.Env, no_pos=False, no_vel=False) -> None:
         if no_pos:
             current_state = current_state[2:]
         elif no_vel:
-            del current_state[2:4]
+            current_state = np.delete(current_state, [2, 3])
 
         # Reset flag and start iterating until episode ends
         done = False
@@ -197,7 +197,7 @@ def run_dqn(agent: DQNAgent, env: gym.Env, no_pos=False, no_vel=False) -> None:
             if no_pos:
                 new_state = new_state[2:]
             elif no_vel:
-                del new_state[2:4]
+                new_state = np.delete(new_state, [2, 3])
 
             # count reward
             episode_reward += reward
@@ -249,6 +249,7 @@ if __name__ == "__main__":
 
     # Adjust network architecture if partially observable
     if args.no_pos or args.no_vel:
+        print("using partial state space")
         agent = DQNAgent(
             env.observation_space.shape[0]-2, env.action_space.n)
     else:
