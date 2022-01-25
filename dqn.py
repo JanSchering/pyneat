@@ -41,7 +41,7 @@ class DQNAgent:
         model.add(Dense(act_dim))
         return model
 
-    def __init__(self, obs_dim, act_dim):
+    def __init__(self, obs_dim: int, act_dim: int):
         # Main model
         self.model = self.create_q_model(obs_dim, act_dim)
         # Target network
@@ -255,7 +255,7 @@ if __name__ == "__main__":
     else:
         agent = DQNAgent(
             env.observation_space.shape[0], env.action_space.n)
-
+    # Run training procedure
     run_dqn(agent, env, args.no_pos, args.no_vel)
 
 # %%

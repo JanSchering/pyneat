@@ -1,6 +1,7 @@
 from keras.callbacks import TensorBoard
 import tensorflow as tf
 import os
+import keras
 
 
 class ModifiedTensorBoard(TensorBoard):
@@ -13,8 +14,7 @@ class ModifiedTensorBoard(TensorBoard):
         self._log_write_dir = self.log_dir
 
     # Overriding this method to stop creating default log writer
-
-    def set_model(self, model):
+    def set_model(self, model: keras.models.Sequential):
         self.model = model
 
         self._train_dir = os.path.join(self._log_write_dir, 'train')
@@ -25,17 +25,15 @@ class ModifiedTensorBoard(TensorBoard):
 
         self._should_write_train_graph = False
 
-    # Overrided, saves logs with our step number
-    # (otherwise every .fit() will start writing from 0th step)
-    def on_epoch_end(self, epoch, logs=None):
+    # Overrided to save logs with correct episode number
+    def on_epoch_end(self, epoch: int, logs=None):
         self.update_stats(**logs)
 
-    # Overrided
-    # We train for one batch only, no need to save anything at epoch end
+    # Overrided, There is just one batch each time
     def on_batch_end(self, batch, logs=None):
         pass
 
-    # Overrided, so won't close writer
+    # Overrided, make sure writer stays open during training
     def on_train_end(self, _):
         pass
 
